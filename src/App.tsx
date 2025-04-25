@@ -170,12 +170,16 @@ function App() {
         engine,
       };
 
-      const response = await axios.post("http://127.0.0.1:3000/tts", data, {
-        headers: {
-          "Content-Type": "application/json",
-          // Origin: "http://localhost:5173",
-        },
-      });
+      const response = await axios.post(
+        "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            // Origin: "http://localhost:5173",
+          },
+        }
+      );
       if (response.data) {
         const audioBlob = base64ToBlob(response.data);
         const url = URL.createObjectURL(audioBlob);
