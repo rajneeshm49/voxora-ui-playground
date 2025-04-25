@@ -127,11 +127,6 @@ function App() {
     return new Blob([bytes], { type: "audio/mp3" });
   };
 
-  // voices: [
-  //   { name: "Camila", value: "Camila", engine: ["neural"] },
-  //   { name: "Vitoria", value: "Vitoria", engine: ["neural"] },
-  //   { name: "Ricardo", value: "Ricardo", engine: ["neural"] },
-  // ],
   const findEngine = (val: string) => {
     const aa = LANGUAGES[selectedLanguage].voices.find(
       (voice) => voice.value == val
