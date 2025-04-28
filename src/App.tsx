@@ -94,6 +94,7 @@ const LANGUAGES = {
 
 function App() {
   type LanguageKey = keyof typeof LANGUAGES;
+  const maxCharacters = 250;
   const [text, setText] = useState("");
   const [isPaused, setIsPaused] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -134,6 +135,17 @@ function App() {
     setEngine(aa?.engine?.[0] || "standard");
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const input = e.target.value;
+    setText(input);
+
+    if (input.length > maxCharacters) {
+      setError(`Maximum ${maxCharacters} characters allowed.`);
+    } else {
+      setError("");
+    }
+  };
+
   const handleSpeak = async () => {
     if (isSpeaking && audioRef.current) {
       audioRef.current.pause();
@@ -167,6 +179,7 @@ function App() {
 
       const response = await axios.post(
         "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
+        // "http://127.0.0.1:3000/tts",
         data,
         {
           headers: {
@@ -258,18 +271,29 @@ function App() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          {error && (
+          {/* {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
               {error}
             </div>
-          )}
+          )} */}
 
           <textarea
             className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
             placeholder="Enter your text here..."
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleChange}
           />
+          {/* {error && <div className="text-red-500 text-sm mt-1">{error}</div>} */}
+          <div className="flex justify-between items-center mt-1 text-sm">
+            <div className="text-red-500">{error}</div>
+            <div
+              className={`${
+                text.length > maxCharacters ? "text-red-500" : "text-gray-500"
+              }`}
+            >
+              {text.length} / {maxCharacters}
+            </div>
+          </div>
 
           <div className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -349,9 +373,9 @@ function App() {
 
             <button
               onClick={handleSpeak}
-              disabled={isLoading}
+              disabled={isLoading || text.length === 0 || error !== ""}
               className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
-                isLoading
+                isLoading || text.length === 0 || error !== ""
                   ? "bg-gray-400 cursor-not-allowed"
                   : isSpeaking
                   ? "bg-red-500 hover:bg-red-600 text-white"
