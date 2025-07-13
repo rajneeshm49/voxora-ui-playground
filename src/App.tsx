@@ -193,6 +193,70 @@ function App() {
     }
   }, [useClonedVoice, clonedVoices]);
 
+  const base64ToBlob = (base64: string) => {
+    const binaryString = window.atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: "audio/mp3" });
+  };
+
+  const findEngine = (val: string) => {
+    const aa = LANGUAGES[selectedLanguage].voices.find(
+      (voice) => voice.value == val
+    );
+    setEngine(aa?.engine?.[0] || "standard");
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const input = e.target.value;
+    setText(input);
+
+    if (input.length > maxCharacters) {
+      setError(`Maximum ${maxCharacters} characters allowed.`);
+    } else {
+      setError("");
+    }
+  };
+
+  const handleRecordingComplete = async (audioBlob: Blob, name: string) => {
+    try {
+      // Simulate API call to upload voice for cloning
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-sample.wav');
+      formData.append('name', name);
+      
+      // Replace with actual API endpoint
+      console.log('Uploading voice for cloning:', { name, audioBlob });
+      
+      // Refresh cloned voices after upload
+      await fetchClonedVoices();
+      
+      // Switch to voices tab after successful upload
+      setActiveTab('voices');
+    } catch (error) {
+      console.error('Error uploading voice:', error);
+    }
+  };
+
+  const handleClonedVoiceSelect = (voiceId: string | null) => {
+    setSelectedClonedVoiceId(voiceId);
+    setUseClonedVoice(voiceId !== null);
+    if (voiceId) {
+      setSelectedVoice(voiceId);
+    }
+  };
+
+  const handleClonedVoiceDelete = (voiceId: string) => {
+    setClonedVoices(prev => prev.filter(voice => voice.id !== voiceId));
+    if (selectedClonedVoiceId === voiceId) {
+      setSelectedClonedVoiceId(null);
+      setUseClonedVoice(false);
+      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
+    }
+  };
+
   const handleSpeak = async () => {
     if (isSpeaking && audioRef.current) {
       audioRef.current.pause();
@@ -401,7 +465,7 @@ function App() {
                     disabled={clonedVoices.filter(voice => voice.status === 'ready').length === 0}
                     className="mr-2"
                   />
-                  <span className={`${!selectedClonedVoiceId ? 'text-gray-400' : 'text-gray-700'}`}>
+                  <span className={`${clonedVoices.filter(voice => voice.status === 'ready').length === 0 ? 'text-gray-400' : 'text-gray-700'}`}>
                     Cloned Voice {clonedVoices.filter(voice => voice.status === 'ready').length === 0 && '(No voices available)'}
                   </span>
                 </label>
@@ -412,7 +476,7 @@ function App() {
               className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               placeholder="Enter your text here..."
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={handleChange}
             />
 
             <div className={`${text.length > maxCharacters ? "text-red-500" : "text-gray-500"}`}>
@@ -452,6 +516,8 @@ function App() {
                       setSelectedVoice(e.target.value);
                       if (useClonedVoice) {
                         setSelectedClonedVoiceId(e.target.value);
+                      } else {
+                        findEngine(e.target.value);
                       }
                     }}
                   >
@@ -517,9 +583,9 @@ function App() {
 
               <button
                 onClick={handleSpeak}
-                disabled={isLoading || text.length === 0 || error !== null}
+                disabled={isLoading || text.length === 0 || error !== ""}
                 className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
-                  isLoading || text.length === 0 || error !== null
+                  isLoading || text.length === 0 || error !== ""
                     ? "bg-gray-400 cursor-not-allowed"
                     : isSpeaking
                     ? "bg-red-500 hover:bg-red-600 text-white"
@@ -566,14 +632,14 @@ function App() {
         )}
 
         {activeTab === 'record' && (
-          <VoiceRecorder onRecordingComplete={() => {}} />
+          <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
         )}
 
         {activeTab === 'voices' && (
           <ClonedVoiceSelector
             selectedVoiceId={selectedClonedVoiceId}
-            onVoiceSelect={() => {}}
-            onVoiceDelete={() => {}}
+            onVoiceSelect={handleClonedVoiceSelect}
+            onVoiceDelete={handleClonedVoiceDelete}
             clonedVoices={clonedVoices}
             onRefresh={fetchClonedVoices}
           />
