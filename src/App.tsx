@@ -173,6 +173,55 @@ function App() {
     fetchClonedVoices();
   }, []);
 
+  // Dummy cloned voices data - replace with actual API call
+  const dummyClonedVoices: ClonedVoice[] = [
+    {
+      id: '1',
+      name: 'My Voice Clone',
+      createdAt: '2024-01-15T10:30:00Z',
+      status: 'ready',
+      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
+    },
+    {
+      id: '2',
+      name: 'Professional Voice',
+      createdAt: '2024-01-14T15:45:00Z',
+      status: 'ready',
+      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
+    },
+    {
+      id: '3',
+      name: 'Casual Voice',
+      createdAt: '2024-01-13T09:20:00Z',
+      status: 'processing',
+    },
+    {
+      id: '4',
+      name: 'Failed Voice',
+      createdAt: '2024-01-12T14:10:00Z',
+      status: 'failed',
+    }
+  ];
+
+  // Fetch cloned voices
+  const fetchClonedVoices = async () => {
+    setIsLoadingVoices(true);
+    try {
+      // Simulate API call - replace with actual endpoint
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setClonedVoices(dummyClonedVoices);
+    } catch (error) {
+      console.error('Error fetching cloned voices:', error);
+    } finally {
+      setIsLoadingVoices(false);
+    }
+  };
+
+  // Load cloned voices on component mount
+  React.useEffect(() => {
+    fetchClonedVoices();
+  }, []);
+
   React.useEffect(() => {
     if (!useClonedVoice) {
       setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
@@ -192,6 +241,7 @@ function App() {
       setSelectedClonedVoiceId(null);
     }
   }, [useClonedVoice, clonedVoices]);
+
   const base64ToBlob = (base64: string) => {
     const binaryString = window.atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -435,10 +485,6 @@ function App() {
         {/* Tab Content */}
         {activeTab === 'tts' && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-                  onChange={() => {
-                    setUseClonedVoice(false);
-                    setSelectedClonedVoiceId(null);
-                  }}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Voice Type
@@ -450,6 +496,7 @@ function App() {
                     name="voiceType"
                     checked={!useClonedVoice}
                     onChange={() => setUseClonedVoice(false)}
+                    onChange={() => setUseClonedVoice(false)}
                     className="mr-2"
                   />
                   <span className="text-gray-700">Standard AI Voices</span>
@@ -459,21 +506,21 @@ function App() {
                     type="radio"
                     name="voiceType"
                     checked={useClonedVoice}
-                    onChange={() => setUseClonedVoice(true)}
-                    disabled={!selectedClonedVoiceId}
+                    onChange={() => {
+                      const readyVoices = clonedVoices.filter(voice => voice.status === 'ready');
+                      if (readyVoices.length > 0) {
+                        setUseClonedVoice(true);
+                      }
+                    }}
+                    disabled={clonedVoices.filter(voice => voice.status === 'ready').length === 0}
                     className="mr-2"
                   />
-                  <span className={`${!selectedClonedVoiceId ? 'text-gray-400' : 'text-gray-700'}`}>
-                    Cloned Voice {!selectedClonedVoiceId && '(Select a voice first)'}
+                  <span className={`${clonedVoices.filter(voice => voice.status === 'ready').length === 0 ? 'text-gray-400' : 'text-gray-700'}`}>
+                    Cloned Voice {clonedVoices.filter(voice => voice.status === 'ready').length === 0 && '(No voices available)'}
                   </span>
                 </label>
               </div>
             </div>
-          {/* {error && (
-            <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
-              {error}
-            </div>
-          )} */}
 
           <textarea
             className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -481,22 +528,14 @@ function App() {
             value={text}
             onChange={handleChange}
           />
-          {/* {error && <div className="text-red-500 text-sm mt-1">{error}</div>} */}
-                  onChange={() => {
-                    const readyVoices = clonedVoices.filter(voice => voice.status === 'ready');
-                    if (readyVoices.length > 0) {
-                      setUseClonedVoice(true);
-                    }
-                  }}
-                  disabled={clonedVoices.filter(voice => voice.status === 'ready').length === 0}
+          
             <div
               className={`${
                 text.length > maxCharacters ? "text-red-500" : "text-gray-500"
-                  Cloned Voice {clonedVoices.filter(voice => voice.status === 'ready').length === 0 && '(No voices available)'}
+              } text-right text-sm mt-2`}
             >
               {text.length} / {maxCharacters}
             </div>
-          </div>
 
           {/* Voice Controls */}
           <div className="mt-6 space-y-4">
