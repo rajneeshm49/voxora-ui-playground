@@ -173,55 +173,6 @@ function App() {
     fetchClonedVoices();
   }, []);
 
-  // Dummy cloned voices data - replace with actual API call
-  const dummyClonedVoices: ClonedVoice[] = [
-    {
-      id: '1',
-      name: 'My Voice Clone',
-      createdAt: '2024-01-15T10:30:00Z',
-      status: 'ready',
-      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
-    },
-    {
-      id: '2',
-      name: 'Professional Voice',
-      createdAt: '2024-01-14T15:45:00Z',
-      status: 'ready',
-      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
-    },
-    {
-      id: '3',
-      name: 'Casual Voice',
-      createdAt: '2024-01-13T09:20:00Z',
-      status: 'processing',
-    },
-    {
-      id: '4',
-      name: 'Failed Voice',
-      createdAt: '2024-01-12T14:10:00Z',
-      status: 'failed',
-    }
-  ];
-
-  // Fetch cloned voices
-  const fetchClonedVoices = async () => {
-    setIsLoadingVoices(true);
-    try {
-      // Simulate API call - replace with actual endpoint
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setClonedVoices(dummyClonedVoices);
-    } catch (error) {
-      console.error('Error fetching cloned voices:', error);
-    } finally {
-      setIsLoadingVoices(false);
-    }
-  };
-
-  // Load cloned voices on component mount
-  React.useEffect(() => {
-    fetchClonedVoices();
-  }, []);
-
   React.useEffect(() => {
     if (!useClonedVoice) {
       setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
@@ -352,12 +303,10 @@ function App() {
 
       const response = await axios.post(
         "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
-        // "http://127.0.0.1:3000/tts",
         data,
         {
           headers: {
             "Content-Type": "application/json",
-            // Origin: "http://localhost:5173",
           },
         }
       );
@@ -366,7 +315,6 @@ function App() {
         const url = URL.createObjectURL(audioBlob);
         setAudioUrl(url);
         setIsComplete(true);
-        // setProgress(100);
 
         if (audioRef.current) {
           audioRef.current.src = url;
@@ -495,8 +443,10 @@ function App() {
                     type="radio"
                     name="voiceType"
                     checked={!useClonedVoice}
-                    onChange={() => setUseClonedVoice(false)}
-                    onChange={() => setUseClonedVoice(false)}
+                    onChange={() => {
+                      setUseClonedVoice(false);
+                      setSelectedClonedVoiceId(null);
+                    }}
                     className="mr-2"
                   />
                   <span className="text-gray-700">Standard AI Voices</span>
@@ -522,167 +472,163 @@ function App() {
               </div>
             </div>
 
-          <textarea
-            className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
-            placeholder="Enter your text here..."
-            value={text}
-            onChange={handleChange}
-          />
-          
-            <div
-              className={`${
-                text.length > maxCharacters ? "text-red-500" : "text-gray-500"
-              } text-right text-sm mt-2`}
-            >
+            <textarea
+              className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              placeholder="Enter your text here..."
+              value={text}
+              onChange={handleChange}
+            />
+
+            <div className={`${text.length > maxCharacters ? "text-red-500" : "text-gray-500"}`}>
               {text.length} / {maxCharacters}
             </div>
 
-          {/* Voice Controls */}
-          <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Language selector - only for standard voices */}
-              {!useClonedVoice && (
-                <div className="flex items-center gap-2">
-                  <Globe2 className="h-5 w-5 text-gray-600" />
-                  <select
-                    className="w-full sm:flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    value={selectedLanguage}
-                    onChange={(e) =>
-                      setSelectedLanguage(e.target.value as LanguageKey)
-                    }
-                  >
-                    {Object.entries(LANGUAGES).map(([code, lang]) => (
-                      <option key={code} value={code}>
-                        {lang.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {/* Voice Controls */}
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Language selector - only for standard voices */}
+                {!useClonedVoice && (
+                  <div className="flex items-center gap-2">
+                    <Globe2 className="h-5 w-5 text-gray-600" />
+                    <select
+                      className="w-full sm:flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      value={selectedLanguage}
+                      onChange={(e) =>
+                        setSelectedLanguage(e.target.value as LanguageKey)
+                      }
+                    >
+                      {Object.entries(LANGUAGES).map(([code, lang]) => (
+                        <option key={code} value={code}>
+                          {lang.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-              {/* Voice selector */}
-              <div className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-gray-600" />
-                <select
-                  className={`${!useClonedVoice ? 'flex-1' : 'w-full'} p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
-                  value={selectedVoice}
-                  onChange={(e) => {
-                    setSelectedVoice(e.target.value);
-                    if (useClonedVoice) {
-                      setSelectedClonedVoiceId(e.target.value);
-                    } else {
-                      findEngine(e.target.value);
-                    }
-                  }}
-                >
-                  {useClonedVoice ? (
-                    clonedVoices
-                      .filter(voice => voice.status === 'ready')
-                      .map((voice) => (
-                        <option key={voice.id} value={voice.id}>
+                {/* Voice selector */}
+                <div className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-gray-600" />
+                  <select
+                    className={`${!useClonedVoice ? 'flex-1' : 'w-full'} p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                    value={selectedVoice}
+                    onChange={(e) => {
+                      setSelectedVoice(e.target.value);
+                      if (useClonedVoice) {
+                        setSelectedClonedVoiceId(e.target.value);
+                      } else {
+                        findEngine(e.target.value);
+                      }
+                    }}
+                  >
+                    {useClonedVoice ? (
+                      clonedVoices
+                        .filter(voice => voice.status === 'ready')
+                        .map((voice) => (
+                          <option key={voice.id} value={voice.id}>
+                            {voice.name}
+                          </option>
+                        ))
+                    ) : (
+                      LANGUAGES[selectedLanguage].voices.map((voice) => (
+                        <option key={voice.value} value={voice.value}>
                           {voice.name}
                         </option>
                       ))
-                  ) : (
-                    LANGUAGES[selectedLanguage].voices.map((voice) => (
-                      <option key={voice.value} value={voice.value}>
-                        {voice.name}
-                      </option>
-                    ))
-                  )}
-                </select>
+                    )}
+                  </select>
+                </div>
               </div>
+
+              {/* Rate and Pitch controls */}
+              {!useClonedVoice && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="flex items-center gap-2 mb-2">
+                      <RefreshCw className="h-5 w-5 text-gray-600" />
+                      <span className="text-gray-700">Rate: {rate}x</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={rate}
+                      onChange={(e) => setRate(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 mb-2">
+                      <Volume2 className="h-5 w-5 text-gray-600" />
+                      <span className="text-gray-700">Pitch: {pitch}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={pitch}
+                      onChange={(e) => setPitch(Number(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Rate and Pitch controls */}
-            {!useClonedVoice && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="flex items-center gap-2 mb-2">
-                    <RefreshCw className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-700">Rate: {rate}x</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
-                    value={rate}
-                    onChange={(e) => setRate(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
+            <div className="mt-6 flex flex-col items-center gap-4">
+              <audio ref={audioRef} className="hidden" />
 
-                <div>
-                  <label className="flex items-center gap-2 mb-2">
-                    <Volume2 className="h-5 w-5 text-gray-600" />
-                    <span className="text-gray-700">Pitch: {pitch}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
-                    value={pitch}
-                    onChange={(e) => setPitch(Number(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
+              <button
+                onClick={handleSpeak}
+                disabled={isLoading || text.length === 0 || error !== ""}
+                className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
+                  isLoading || text.length === 0 || error !== ""
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : isSpeaking
+                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    : "bg-purple-600 hover:bg-purple-700 text-white"
+                }`}
+              >
+                <Volume2 className="h-5 w-5" />
+                {isLoading ? "Converting..." : isSpeaking ? "Stop" : "Speak"}
+              </button>
+
+              {showControls && (
+                <div className="w-full space-y-4">
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={handleDownload}
+                      disabled={!isComplete || !audioUrl}
+                      className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                        isComplete && audioUrl
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      <Download className="h-5 w-5" />
+                      Download
+                    </button>
+
+                    <button
+                      onClick={handleShare}
+                      disabled={!isComplete || !audioUrl}
+                      className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                        isComplete && audioUrl
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                    >
+                      <Share2 className="h-5 w-5" />
+                      Share
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-
-          <div className="mt-6 flex flex-col items-center gap-4">
-            <audio ref={audioRef} className="hidden" />
-
-            <button
-              onClick={handleSpeak}
-              disabled={isLoading || text.length === 0 || error !== ""}
-              className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
-                isLoading || text.length === 0 || error !== ""
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : isSpeaking
-                  ? "bg-red-500 hover:bg-red-600 text-white"
-                  : "bg-purple-600 hover:bg-purple-700 text-white"
-              }`}
-            >
-              <Volume2 className="h-5 w-5" />
-              {isLoading ? "Converting..." : isSpeaking ? "Stop" : "Speak"}
-            </button>
-
-            {showControls && (
-              <div className="w-full space-y-4">
-                <div className="flex justify-center gap-4">
-                  <button
-                    onClick={handleDownload}
-                    disabled={!isComplete || !audioUrl}
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                      isComplete && audioUrl
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
-                  >
-                    <Download className="h-5 w-5" />
-                    Download
-                  </button>
-
-                  <button
-                    onClick={handleShare}
-                    disabled={!isComplete || !audioUrl}
-                    className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                      isComplete && audioUrl
-                        ? "bg-blue-600 hover:bg-blue-700 text-white"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
-                  >
-                    <Share2 className="h-5 w-5" />
-                    Share
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
         )}
 
         {activeTab === 'record' && (
