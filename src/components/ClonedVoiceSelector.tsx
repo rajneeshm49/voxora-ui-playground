@@ -13,64 +13,31 @@ interface ClonedVoiceSelectorProps {
   selectedVoiceId: string | null;
   onVoiceSelect: (voiceId: string | null) => void;
   onVoiceDelete: (voiceId: string) => void;
+  clonedVoices: ClonedVoice[];
+  onRefresh: () => Promise<void>;
 }
 
 export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
   selectedVoiceId,
   onVoiceSelect,
   onVoiceDelete,
+  clonedVoices,
+  onRefresh,
 }) => {
-  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
-  // Dummy data - replace with actual API call
-  const dummyVoices: ClonedVoice[] = [
-    {
-      id: '1',
-      name: 'My Voice Clone',
-      createdAt: '2024-01-15T10:30:00Z',
-      status: 'ready',
-      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
-    },
-    {
-      id: '2',
-      name: 'Professional Voice',
-      createdAt: '2024-01-14T15:45:00Z',
-      status: 'ready',
-      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
-    },
-    {
-      id: '3',
-      name: 'Casual Voice',
-      createdAt: '2024-01-13T09:20:00Z',
-      status: 'processing',
-    },
-    {
-      id: '4',
-      name: 'Failed Voice',
-      createdAt: '2024-01-12T14:10:00Z',
-      status: 'failed',
-    }
-  ];
-
-  const fetchClonedVoices = async () => {
+  const handleRefresh = async () => {
     setIsLoading(true);
     try {
-      // Simulate API call - replace with actual endpoint
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setClonedVoices(dummyVoices);
+      await onRefresh();
     } catch (error) {
       console.error('Error fetching cloned voices:', error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchClonedVoices();
-  }, []);
 
   const handlePlaySample = (voice: ClonedVoice) => {
     if (!voice.sampleUrl) return;
@@ -116,12 +83,7 @@ export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
       // Simulate API call - replace with actual endpoint
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      setClonedVoices(prev => prev.filter(voice => voice.id !== voiceId));
       onVoiceDelete(voiceId);
-      
-      if (selectedVoiceId === voiceId) {
-        onVoiceSelect(null);
-      }
     } catch (error) {
       console.error('Error deleting voice:', error);
       alert('Error deleting voice. Please try again.');
@@ -164,7 +126,7 @@ export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
           Cloned Voices
         </h3>
         <button
-          onClick={fetchClonedVoices}
+          onClick={handleRefresh}
           disabled={isLoading}
           className="p-2 text-gray-600 hover:text-purple-600 transition-colors disabled:opacity-50"
           title="Refresh voices"

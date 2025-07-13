@@ -120,12 +120,78 @@ function App() {
   const [activeTab, setActiveTab] = useState<'tts' | 'record' | 'voices'>('tts');
   const [selectedClonedVoiceId, setSelectedClonedVoiceId] = useState<string | null>(null);
   const [useClonedVoice, setUseClonedVoice] = useState(false);
+  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
+  const [isLoadingVoices, setIsLoadingVoices] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Dummy cloned voices data - replace with actual API call
+  const dummyClonedVoices: ClonedVoice[] = [
+    {
+      id: '1',
+      name: 'My Voice Clone',
+      createdAt: '2024-01-15T10:30:00Z',
+      status: 'ready',
+      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
+    },
+    {
+      id: '2',
+      name: 'Professional Voice',
+      createdAt: '2024-01-14T15:45:00Z',
+      status: 'ready',
+      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
+    },
+    {
+      id: '3',
+      name: 'Casual Voice',
+      createdAt: '2024-01-13T09:20:00Z',
+      status: 'processing',
+    },
+    {
+      id: '4',
+      name: 'Failed Voice',
+      createdAt: '2024-01-12T14:10:00Z',
+      status: 'failed',
+    }
+  ];
+
+  // Fetch cloned voices
+  const fetchClonedVoices = async () => {
+    setIsLoadingVoices(true);
+    try {
+      // Simulate API call - replace with actual endpoint
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setClonedVoices(dummyClonedVoices);
+    } catch (error) {
+      console.error('Error fetching cloned voices:', error);
+    } finally {
+      setIsLoadingVoices(false);
+    }
+  };
+
+  // Load cloned voices on component mount
   React.useEffect(() => {
-    setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
+    fetchClonedVoices();
+  }, []);
+
+  React.useEffect(() => {
+    if (!useClonedVoice) {
+      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
+    }
   }, [selectedLanguage]);
 
+  // Update selected voice when switching to cloned voices
+  React.useEffect(() => {
+    if (useClonedVoice) {
+      const readyVoices = clonedVoices.filter(voice => voice.status === 'ready');
+      if (readyVoices.length > 0) {
+        setSelectedVoice(readyVoices[0].id);
+        setSelectedClonedVoiceId(readyVoices[0].id);
+      }
+    } else {
+      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
+      setSelectedClonedVoiceId(null);
+    }
+  }, [useClonedVoice, clonedVoices]);
   const base64ToBlob = (base64: string) => {
     const binaryString = window.atob(base64);
     const bytes = new Uint8Array(binaryString.length);
@@ -163,6 +229,9 @@ function App() {
       // Replace with actual API endpoint
       console.log('Uploading voice for cloning:', { name, audioBlob });
       
+      // Refresh cloned voices after upload
+      await fetchClonedVoices();
+      
       // Switch to voices tab after successful upload
       setActiveTab('voices');
     } catch (error) {
@@ -173,12 +242,17 @@ function App() {
   const handleClonedVoiceSelect = (voiceId: string | null) => {
     setSelectedClonedVoiceId(voiceId);
     setUseClonedVoice(voiceId !== null);
+    if (voiceId) {
+      setSelectedVoice(voiceId);
+    }
   };
 
   const handleClonedVoiceDelete = (voiceId: string) => {
+    setClonedVoices(prev => prev.filter(voice => voice.id !== voiceId));
     if (selectedClonedVoiceId === voiceId) {
       setSelectedClonedVoiceId(null);
       setUseClonedVoice(false);
+      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
     }
   };
 
@@ -361,7 +435,10 @@ function App() {
         {/* Tab Content */}
         {activeTab === 'tts' && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            {/* Voice Type Selection */}
+                  onChange={() => {
+                    setUseClonedVoice(false);
+                    setSelectedClonedVoiceId(null);
+                  }}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Voice Type
@@ -405,92 +482,116 @@ function App() {
             onChange={handleChange}
           />
           {/* {error && <div className="text-red-500 text-sm mt-1">{error}</div>} */}
-          <div className="flex justify-between items-center mt-1 text-sm">
-            <div className="text-red-500">{error}</div>
+                  onChange={() => {
+                    const readyVoices = clonedVoices.filter(voice => voice.status === 'ready');
+                    if (readyVoices.length > 0) {
+                      setUseClonedVoice(true);
+                    }
+                  }}
+                  disabled={clonedVoices.filter(voice => voice.status === 'ready').length === 0}
             <div
               className={`${
                 text.length > maxCharacters ? "text-red-500" : "text-gray-500"
-              }`}
+                  Cloned Voice {clonedVoices.filter(voice => voice.status === 'ready').length === 0 && '(No voices available)'}
             >
               {text.length} / {maxCharacters}
             </div>
           </div>
 
-          {/* Standard Voice Controls */}
-          {!useClonedVoice && (
-            <div className="mt-6 space-y-4">
+          {/* Voice Controls */}
+          <div className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-2">
-                <Globe2 className="h-5 w-5 text-gray-600" />
-                <select
-                  className="w-full sm:flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  value={selectedLanguage}
-                  onChange={(e) =>
-                    setSelectedLanguage(e.target.value as LanguageKey)
-                  }
-                >
-                  {Object.entries(LANGUAGES).map(([code, lang]) => (
-                    <option key={code} value={code}>
-                      {lang.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Language selector - only for standard voices */}
+              {!useClonedVoice && (
+                <div className="flex items-center gap-2">
+                  <Globe2 className="h-5 w-5 text-gray-600" />
+                  <select
+                    className="w-full sm:flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    value={selectedLanguage}
+                    onChange={(e) =>
+                      setSelectedLanguage(e.target.value as LanguageKey)
+                    }
+                  >
+                    {Object.entries(LANGUAGES).map(([code, lang]) => (
+                      <option key={code} value={code}>
+                        {lang.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
+              {/* Voice selector */}
               <div className="flex items-center gap-2">
                 <Settings className="h-5 w-5 text-gray-600" />
                 <select
-                  className="flex-1 p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className={`${!useClonedVoice ? 'flex-1' : 'w-full'} p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
                   value={selectedVoice}
                   onChange={(e) => {
                     setSelectedVoice(e.target.value);
-                    findEngine(e.target.value);
+                    if (useClonedVoice) {
+                      setSelectedClonedVoiceId(e.target.value);
+                    } else {
+                      findEngine(e.target.value);
+                    }
                   }}
                 >
-                  {LANGUAGES[selectedLanguage].voices.map((voice) => (
-                    <option key={voice.value} value={voice.value}>
-                      {voice.name}
-                    </option>
-                  ))}
+                  {useClonedVoice ? (
+                    clonedVoices
+                      .filter(voice => voice.status === 'ready')
+                      .map((voice) => (
+                        <option key={voice.id} value={voice.id}>
+                          {voice.name}
+                        </option>
+                      ))
+                  ) : (
+                    LANGUAGES[selectedLanguage].voices.map((voice) => (
+                      <option key={voice.value} value={voice.value}>
+                        {voice.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="flex items-center gap-2 mb-2">
-                  <RefreshCw className="h-5 w-5 text-gray-600" />
-                  <span className="text-gray-700">Rate: {rate}x</span>
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={rate}
-                  onChange={(e) => setRate(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
+            {/* Rate and Pitch controls */}
+            {!useClonedVoice && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 mb-2">
+                    <RefreshCw className="h-5 w-5 text-gray-600" />
+                    <span className="text-gray-700">Rate: {rate}x</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={rate}
+                    onChange={(e) => setRate(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
 
-              <div>
-                <label className="flex items-center gap-2 mb-2">
-                  <Volume2 className="h-5 w-5 text-gray-600" />
-                  <span className="text-gray-700">Pitch: {pitch}</span>
-                </label>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="2"
-                  step="0.1"
-                  value={pitch}
-                  onChange={(e) => setPitch(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
+                <div>
+                  <label className="flex items-center gap-2 mb-2">
+                    <Volume2 className="h-5 w-5 text-gray-600" />
+                    <span className="text-gray-700">Pitch: {pitch}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={pitch}
+                    onChange={(e) => setPitch(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
-          )}
 
           <div className="mt-6 flex flex-col items-center gap-4">
             <audio ref={audioRef} className="hidden" />
@@ -554,6 +655,8 @@ function App() {
             selectedVoiceId={selectedClonedVoiceId}
             onVoiceSelect={handleClonedVoiceSelect}
             onVoiceDelete={handleClonedVoiceDelete}
+            clonedVoices={clonedVoices}
+            onRefresh={fetchClonedVoices}
           />
         )}
       </div>
