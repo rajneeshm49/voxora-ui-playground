@@ -14,7 +14,10 @@ import {
 import RecordRTC from "recordrtc";
 import axios from "axios";
 import { VoiceRecorder } from "./components/VoiceRecorder";
-import { ClonedVoiceSelector, ClonedVoice } from "./components/ClonedVoiceSelector";
+import {
+  ClonedVoiceSelector,
+  ClonedVoice,
+} from "./components/ClonedVoiceSelector";
 
 // Define available languages and their voices
 const LANGUAGES = {
@@ -117,8 +120,12 @@ function App() {
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'tts' | 'record' | 'voices'>('tts');
-  const [selectedClonedVoiceId, setSelectedClonedVoiceId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"tts" | "record" | "voices">(
+    "tts"
+  );
+  const [selectedClonedVoiceId, setSelectedClonedVoiceId] = useState<
+    string | null
+  >(null);
   const [useClonedVoice, setUseClonedVoice] = useState(false);
   const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
@@ -127,31 +134,31 @@ function App() {
   // Dummy cloned voices data - replace with actual API call
   const dummyClonedVoices: ClonedVoice[] = [
     {
-      id: '1',
-      name: 'My Voice Clone',
-      createdAt: '2024-01-15T10:30:00Z',
-      status: 'ready',
-      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
+      id: "1",
+      name: "My Voice Clone",
+      createdAt: "2024-01-15T10:30:00Z",
+      status: "ready",
+      sampleUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
     },
     {
-      id: '2',
-      name: 'Professional Voice',
-      createdAt: '2024-01-14T15:45:00Z',
-      status: 'ready',
-      sampleUrl: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'
+      id: "2",
+      name: "Professional Voice",
+      createdAt: "2024-01-14T15:45:00Z",
+      status: "ready",
+      sampleUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
     },
     {
-      id: '3',
-      name: 'Casual Voice',
-      createdAt: '2024-01-13T09:20:00Z',
-      status: 'processing',
+      id: "3",
+      name: "Casual Voice",
+      createdAt: "2024-01-13T09:20:00Z",
+      status: "processing",
     },
     {
-      id: '4',
-      name: 'Failed Voice',
-      createdAt: '2024-01-12T14:10:00Z',
-      status: 'failed',
-    }
+      id: "4",
+      name: "Failed Voice",
+      createdAt: "2024-01-12T14:10:00Z",
+      status: "failed",
+    },
   ];
 
   // Fetch cloned voices
@@ -159,10 +166,10 @@ function App() {
     setIsLoadingVoices(true);
     try {
       // Simulate API call - replace with actual endpoint
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setClonedVoices(dummyClonedVoices);
     } catch (error) {
-      console.error('Error fetching cloned voices:', error);
+      console.error("Error fetching cloned voices:", error);
     } finally {
       setIsLoadingVoices(false);
     }
@@ -182,7 +189,9 @@ function App() {
   // Update selected voice when switching to cloned voices
   React.useEffect(() => {
     if (useClonedVoice) {
-      const readyVoices = clonedVoices.filter(voice => voice.status === 'ready');
+      const readyVoices = clonedVoices.filter(
+        (voice) => voice.status === "ready"
+      );
       if (readyVoices.length > 0) {
         setSelectedVoice(readyVoices[0].id);
         setSelectedClonedVoiceId(readyVoices[0].id);
@@ -224,19 +233,19 @@ function App() {
     try {
       // Simulate API call to upload voice for cloning
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice-sample.wav');
-      formData.append('name', name);
-      
+      formData.append("audio", audioBlob, "voice-sample.wav");
+      formData.append("name", name);
+
       // Replace with actual API endpoint
-      console.log('Uploading voice for cloning:', { name, audioBlob });
-      
+      console.log("Uploading voice for cloning:", { name, audioBlob });
+
       // Refresh cloned voices after upload
       await fetchClonedVoices();
-      
+
       // Switch to voices tab after successful upload
-      setActiveTab('voices');
+      setActiveTab("voices");
     } catch (error) {
-      console.error('Error uploading voice:', error);
+      console.error("Error uploading voice:", error);
     }
   };
 
@@ -249,7 +258,7 @@ function App() {
   };
 
   const handleClonedVoiceDelete = (voiceId: string) => {
-    setClonedVoices(prev => prev.filter(voice => voice.id !== voiceId));
+    setClonedVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
     if (selectedClonedVoiceId === voiceId) {
       setSelectedClonedVoiceId(null);
       setUseClonedVoice(false);
@@ -280,7 +289,7 @@ function App() {
       setShowControls(true);
 
       let data;
-      
+
       if (useClonedVoice && selectedClonedVoiceId) {
         // Use cloned voice
         data = {
@@ -395,17 +404,17 @@ function App() {
         <div className="bg-white rounded-xl shadow-lg mb-6">
           <div className="flex border-b border-gray-200">
             <button
-              onClick={() => setActiveTab('tts')}
+              onClick={() => setActiveTab("tts")}
               className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-                activeTab === 'tts'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 hover:text-gray-800'
+                activeTab === "tts"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-gray-800"
               }`}
             >
               <Volume2 className="h-5 w-5 mx-auto mb-1" />
               Text to Speech
             </button>
-            <button
+            {/* <button
               onClick={() => setActiveTab('record')}
               className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
                 activeTab === 'record'
@@ -426,14 +435,14 @@ function App() {
             >
               <User className="h-5 w-5 mx-auto mb-1" />
               My Voices
-            </button>
+            </button> */}
           </div>
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'tts' && (
+        {activeTab === "tts" && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <div className="mb-6">
+            {/* <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Voice Type
               </label>
@@ -457,20 +466,34 @@ function App() {
                     name="voiceType"
                     checked={useClonedVoice}
                     onChange={() => {
-                      const readyVoices = clonedVoices.filter(voice => voice.status === 'ready');
+                      const readyVoices = clonedVoices.filter(
+                        (voice) => voice.status === "ready"
+                      );
                       if (readyVoices.length > 0) {
                         setUseClonedVoice(true);
                       }
                     }}
-                    disabled={clonedVoices.filter(voice => voice.status === 'ready').length === 0}
+                    disabled={
+                      clonedVoices.filter((voice) => voice.status === "ready")
+                        .length === 0
+                    }
                     className="mr-2"
                   />
-                  <span className={`${clonedVoices.filter(voice => voice.status === 'ready').length === 0 ? 'text-gray-400' : 'text-gray-700'}`}>
-                    Cloned Voice {clonedVoices.filter(voice => voice.status === 'ready').length === 0 && '(No voices available)'}
+                  <span
+                    className={`${
+                      clonedVoices.filter((voice) => voice.status === "ready")
+                        .length === 0
+                        ? "text-gray-400"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    Cloned Voice{" "}
+                    {clonedVoices.filter((voice) => voice.status === "ready")
+                      .length === 0 && "(No voices available)"}
                   </span>
                 </label>
               </div>
-            </div>
+            </div> */}
 
             <textarea
               className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -479,7 +502,11 @@ function App() {
               onChange={handleChange}
             />
 
-            <div className={`${text.length > maxCharacters ? "text-red-500" : "text-gray-500"}`}>
+            <div
+              className={`${
+                text.length > maxCharacters ? "text-red-500" : "text-gray-500"
+              }`}
+            >
               {text.length} / {maxCharacters}
             </div>
 
@@ -510,7 +537,9 @@ function App() {
                 <div className="flex items-center gap-2">
                   <Settings className="h-5 w-5 text-gray-600" />
                   <select
-                    className={`${!useClonedVoice ? 'flex-1' : 'w-full'} p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
+                    className={`${
+                      !useClonedVoice ? "flex-1" : "w-full"
+                    } p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
                     value={selectedVoice}
                     onChange={(e) => {
                       setSelectedVoice(e.target.value);
@@ -521,21 +550,19 @@ function App() {
                       }
                     }}
                   >
-                    {useClonedVoice ? (
-                      clonedVoices
-                        .filter(voice => voice.status === 'ready')
-                        .map((voice) => (
-                          <option key={voice.id} value={voice.id}>
+                    {useClonedVoice
+                      ? clonedVoices
+                          .filter((voice) => voice.status === "ready")
+                          .map((voice) => (
+                            <option key={voice.id} value={voice.id}>
+                              {voice.name}
+                            </option>
+                          ))
+                      : LANGUAGES[selectedLanguage].voices.map((voice) => (
+                          <option key={voice.value} value={voice.value}>
                             {voice.name}
                           </option>
-                        ))
-                    ) : (
-                      LANGUAGES[selectedLanguage].voices.map((voice) => (
-                        <option key={voice.value} value={voice.value}>
-                          {voice.name}
-                        </option>
-                      ))
-                    )}
+                        ))}
                   </select>
                 </div>
               </div>
@@ -631,11 +658,11 @@ function App() {
           </div>
         )}
 
-        {activeTab === 'record' && (
+        {activeTab === "record" && (
           <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
         )}
 
-        {activeTab === 'voices' && (
+        {activeTab === "voices" && (
           <ClonedVoiceSelector
             selectedVoiceId={selectedClonedVoiceId}
             onVoiceSelect={handleClonedVoiceSelect}
