@@ -8,9 +8,13 @@ import {
   Download,
   Share2,
   Globe2,
+  Mic,
+  User,
 } from "lucide-react";
 import RecordRTC from "recordrtc";
 import axios from "axios";
+import { VoiceRecorder } from "./components/VoiceRecorder";
+import { ClonedVoiceSelector, ClonedVoice } from "./components/ClonedVoiceSelector";
 
 // Define available languages and their voices
 const LANGUAGES = {
@@ -113,6 +117,9 @@ function App() {
   const [showControls, setShowControls] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'tts' | 'record' | 'voices'>('tts');
+  const [selectedClonedVoiceId, setSelectedClonedVoiceId] = useState<string | null>(null);
+  const [useClonedVoice, setUseClonedVoice] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   React.useEffect(() => {
@@ -146,6 +153,35 @@ function App() {
     }
   };
 
+  const handleRecordingComplete = async (audioBlob: Blob, name: string) => {
+    try {
+      // Simulate API call to upload voice for cloning
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice-sample.wav');
+      formData.append('name', name);
+      
+      // Replace with actual API endpoint
+      console.log('Uploading voice for cloning:', { name, audioBlob });
+      
+      // Switch to voices tab after successful upload
+      setActiveTab('voices');
+    } catch (error) {
+      console.error('Error uploading voice:', error);
+    }
+  };
+
+  const handleClonedVoiceSelect = (voiceId: string | null) => {
+    setSelectedClonedVoiceId(voiceId);
+    setUseClonedVoice(voiceId !== null);
+  };
+
+  const handleClonedVoiceDelete = (voiceId: string) => {
+    if (selectedClonedVoiceId === voiceId) {
+      setSelectedClonedVoiceId(null);
+      setUseClonedVoice(false);
+    }
+  };
+
   const handleSpeak = async () => {
     if (isSpeaking && audioRef.current) {
       audioRef.current.pause();
@@ -168,14 +204,27 @@ function App() {
       setAudioUrl(null);
       setShowControls(true);
 
-      const data = {
-        text: `<speak><prosody rate=\"${convertToSSML(
-          rate
-        )}\" pitch=\"${convertToSSML(pitch)}\">${text}</prosody></speak>`,
-        language: selectedLanguage,
-        voice: selectedVoice,
-        engine,
-      };
+      let data;
+      
+      if (useClonedVoice && selectedClonedVoiceId) {
+        // Use cloned voice
+        data = {
+          text,
+          clonedVoiceId: selectedClonedVoiceId,
+          rate,
+          pitch,
+        };
+      } else {
+        // Use standard voice
+        data = {
+          text: `<speak><prosody rate=\"${convertToSSML(
+            rate
+          )}\" pitch=\"${convertToSSML(pitch)}\">${text}</prosody></speak>`,
+          language: selectedLanguage,
+          voice: selectedVoice,
+          engine,
+        };
+      }
 
       const response = await axios.post(
         "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
@@ -263,14 +312,86 @@ function App() {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
             <Volume2 className="h-8 w-8 text-purple-600" />
-            Text to Speech
+            Voxora
           </h1>
           <p className="text-gray-600">
-            Convert your text into natural-sounding speech and download as audio
+            Convert text to speech with AI voices or create your own voice clone
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-xl shadow-lg mb-6">
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('tts')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+                activeTab === 'tts'
+                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Volume2 className="h-5 w-5 mx-auto mb-1" />
+              Text to Speech
+            </button>
+            <button
+              onClick={() => setActiveTab('record')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+                activeTab === 'record'
+                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Mic className="h-5 w-5 mx-auto mb-1" />
+              Record Voice
+            </button>
+            <button
+              onClick={() => setActiveTab('voices')}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+                activeTab === 'voices'
+                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <User className="h-5 w-5 mx-auto mb-1" />
+              My Voices
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'tts' && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            {/* Voice Type Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Voice Type
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="voiceType"
+                    checked={!useClonedVoice}
+                    onChange={() => setUseClonedVoice(false)}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-700">Standard AI Voices</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="voiceType"
+                    checked={useClonedVoice}
+                    onChange={() => setUseClonedVoice(true)}
+                    disabled={!selectedClonedVoiceId}
+                    className="mr-2"
+                  />
+                  <span className={`${!selectedClonedVoiceId ? 'text-gray-400' : 'text-gray-700'}`}>
+                    Cloned Voice {!selectedClonedVoiceId && '(Select a voice first)'}
+                  </span>
+                </label>
+              </div>
+            </div>
           {/* {error && (
             <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
               {error}
@@ -295,7 +416,9 @@ function App() {
             </div>
           </div>
 
-          <div className="mt-6 space-y-4">
+          {/* Standard Voice Controls */}
+          {!useClonedVoice && (
+            <div className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <Globe2 className="h-5 w-5 text-gray-600" />
@@ -367,6 +490,7 @@ function App() {
               </div>
             </div>
           </div>
+          )}
 
           <div className="mt-6 flex flex-col items-center gap-4">
             <audio ref={audioRef} className="hidden" />
@@ -419,6 +543,19 @@ function App() {
             )}
           </div>
         </div>
+        )}
+
+        {activeTab === 'record' && (
+          <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+        )}
+
+        {activeTab === 'voices' && (
+          <ClonedVoiceSelector
+            selectedVoiceId={selectedClonedVoiceId}
+            onVoiceSelect={handleClonedVoiceSelect}
+            onVoiceDelete={handleClonedVoiceDelete}
+          />
+        )}
       </div>
     </div>
   );
