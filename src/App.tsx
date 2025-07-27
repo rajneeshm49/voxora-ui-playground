@@ -366,10 +366,10 @@ function App() {
     }
   };
 
-  const handleClonedVoiceSelect = (voiceId: string) => {
+  const handleClonedVoiceSelect = (voiceId: string | null) => {
     setSelectedClonedVoiceId(voiceId);
-    setSelectedVoice(voiceId);
-    setUseClonedVoice(true);
+    setSelectedVoice(voiceId || "Joanna");
+    setUseClonedVoice(!!voiceId);
     setActiveTab("tts");
   };
 
