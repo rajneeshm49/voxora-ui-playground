@@ -1,17 +1,22 @@
-import React, { useState, useRef } from 'react';
-import { Mic, Square, Play, Pause, Upload, Trash2 } from 'lucide-react';
+import React, { useState, useRef } from "react";
+import { Mic, Square, Play, Pause, Upload, Trash2 } from "lucide-react";
+import { SuccessMessage } from "./SuccessMessage";
 
 interface VoiceRecorderProps {
   onRecordingComplete: (audioBlob: Blob, name: string) => void;
 }
 
-export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplete }) => {
+export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
+  onRecordingComplete,
+}) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [voiceName, setVoiceName] = useState('');
+  const [voiceName, setVoiceName] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -33,13 +38,13 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/wav' });
+        const blob = new Blob(chunksRef.current, { type: "audio/wav" });
         const url = URL.createObjectURL(blob);
         setRecordedAudio(url);
         recordedBlobRef.current = blob;
-        
+
         // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
@@ -48,12 +53,11 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
 
       // Start timer
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        setRecordingTime((prev) => prev + 1);
       }, 1000);
-
     } catch (error) {
-      console.error('Error accessing microphone:', error);
-      alert('Error accessing microphone. Please check permissions.');
+      console.error("Error accessing microphone:", error);
+      alert("Error accessing microphone. Please check permissions.");
     }
   };
 
@@ -61,7 +65,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      
+
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -85,9 +89,9 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
     setRecordedAudio(null);
     setIsPlaying(false);
     setRecordingTime(0);
-    setVoiceName('');
+    setVoiceName("");
     recordedBlobRef.current = null;
-    
+
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -96,23 +100,57 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
 
   const uploadVoice = async () => {
     if (!recordedBlobRef.current || !voiceName.trim()) {
-      alert('Please provide a voice name and record audio first.');
+      alert("Please provide a voice name and record audio first.");
       return;
     }
 
     setIsUploading(true);
     try {
-      // Simulate API call - replace with actual endpoint
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append(
+        "audio",
+        recordedBlobRef.current,
+        `${voiceName.trim()}.wav`
+      );
+      formData.append("name", voiceName.trim());
+
+      // Call the actual API endpoint
+      const response = await fetch(
+        "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/upload-voice",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Voice upload successful:", result);
+
       onRecordingComplete(recordedBlobRef.current, voiceName.trim());
-      
+
       // Reset form
       deleteRecording();
-      alert('Voice uploaded successfully!');
+      setSuccessMessage(`Voice "${voiceName.trim()}" uploaded successfully!`);
+      setShowSuccessMessage(true);
+
+      // Also trigger refresh in parent component to show updated voices
+      // The success message will show in both components
     } catch (error) {
-      console.error('Error uploading voice:', error);
-      alert('Error uploading voice. Please try again.');
+      console.error("Error uploading voice:", error);
+      setSuccessMessage(
+        `Error uploading voice: ${
+          error instanceof Error ? error.message : "Please try again."
+        }`
+      );
+      setShowSuccessMessage(true);
     } finally {
       setIsUploading(false);
     }
@@ -121,11 +159,17 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6">
+    <div className="bg-white rounded-xl shadow-lg p-6 relative">
+      <SuccessMessage
+        message={successMessage}
+        isVisible={showSuccessMessage}
+        onClose={() => setShowSuccessMessage(false)}
+      />
+
       <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
         <Mic className="h-6 w-6 text-purple-600" />
         Record Your Voice
@@ -185,10 +229,14 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
                 onClick={playRecording}
                 className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg flex items-center gap-2 transition-colors"
               >
-                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                {isPlaying ? 'Pause' : 'Play'}
+                {isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="h-4 w-4" />
+                )}
+                {isPlaying ? "Pause" : "Play"}
               </button>
-              
+
               <button
                 onClick={deleteRecording}
                 disabled={isUploading}
@@ -208,7 +256,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onRecordingComplet
               className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload className="h-5 w-5" />
-              {isUploading ? 'Uploading...' : 'Upload Voice'}
+              {isUploading ? "Uploading..." : "Upload Voice"}
             </button>
           )}
         </div>

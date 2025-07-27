@@ -1,499 +1,585 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Volume2,
-  Pause,
-  Play,
-  Settings,
-  RefreshCw,
   Download,
   Share2,
+  Settings,
+  RefreshCw,
   Globe2,
   Mic,
   User,
+  LogIn,
 } from "lucide-react";
-import RecordRTC from "recordrtc";
-import axios from "axios";
+import { useAuth } from "./contexts/AuthContext";
+import { AuthModal } from "./components/AuthModal";
+import { UserMenu } from "./components/UserMenu";
 import { VoiceRecorder } from "./components/VoiceRecorder";
 import {
   ClonedVoiceSelector,
   ClonedVoice,
 } from "./components/ClonedVoiceSelector";
+import {
+  textToSpeech,
+  clonedTextToSpeech,
+  fetchClonedVoices as apiFetchClonedVoices,
+  uploadVoice as apiUploadVoice,
+  deleteVoice as apiDeleteVoice,
+} from "./utils/api";
+import {
+  SuccessMessage,
+  SuccessMessageProps,
+} from "./components/SuccessMessage";
+import { AxiosError } from "axios";
 
-// Define available languages and their voices
-const LANGUAGES = {
+// Language and voice configurations
+type LanguageKey =
+  | "en-US"
+  | "es-ES"
+  | "fr-FR"
+  | "de-DE"
+  | "it-IT"
+  | "pt-BR"
+  | "ru-RU"
+  | "ja-JP"
+  | "ko-KR"
+  | "zh-CN";
+
+interface Voice {
+  name: string;
+  value: string;
+  engine: "standard" | "neural";
+}
+
+interface Language {
+  name: string;
+  voices: Voice[];
+}
+
+const LANGUAGES: Record<LanguageKey, Language> = {
   "en-US": {
     name: "English (US)",
     voices: [
-      { name: "Joanna", value: "Joanna" },
-      { name: "Matthew", value: "Matthew", engine: ["standard", "neural"] },
-      { name: "Ivy", value: "Ivy", engine: ["standard", "neural"] },
-      { name: "Justin", value: "Justin", engine: ["standard", "neural"] },
-      { name: "Kendra", value: "Kendra", engine: ["standard", "neural"] },
-      { name: "Kimberly", value: "Kimberly", engine: ["standard", "neural"] },
-      { name: "Salli", value: "Salli", engine: ["standard", "neural"] },
-      { name: "Joey", value: "Joey", engine: ["standard", "neural"] },
-      { name: "Kevin", value: "Kevin", engine: ["standard", "neural"] },
-      { name: "Ruth", value: "Ruth", engine: ["standard", "neural"] },
-      { name: "Stephen", value: "Stephen", engine: ["standard", "neural"] },
-    ],
-  },
-  "en-GB": {
-    name: "English (British)",
-    voices: [
-      { name: "Amy", value: "Amy", engine: ["standard", "neural"] },
-      { name: "Emma", value: "Emma", engine: ["standard", "neural"] },
-      { name: "Brian", value: "Brian", engine: ["standard", "neural"] },
-      { name: "Arthur", value: "Arthur", engine: ["standard"] },
-    ],
-  },
-  "en-IN": {
-    name: "English (Indian)",
-    voices: [
-      { name: "Aditi", value: "Aditi", engine: ["standard"] },
-      { name: "Raveena", value: "Raveena", engine: ["standard"] },
-    ],
-  },
-  "hi-IN": {
-    name: "Hindi",
-    voices: [{ name: "Aditi", value: "Aditi", engine: ["standard"] }],
-  },
-  "fr-FR": {
-    name: "French (France)",
-    voices: [
-      { name: "Celine", value: "Celine", engine: ["standard"] },
-      { name: "Mathieu", value: "Mathieu", engine: ["standard"] },
-    ],
-  },
-  "de-DE": {
-    name: "German",
-    voices: [
-      { name: "Marlene", value: "Marlene", engine: ["standard"] },
-      { name: "Hans", value: "Hans", engine: ["standard"] },
+      { name: "Joanna (Female)", value: "Joanna", engine: "neural" },
+      { name: "Matthew (Male)", value: "Matthew", engine: "neural" },
+      { name: "Amy (Female)", value: "Amy", engine: "neural" },
+      { name: "Brian (Male)", value: "Brian", engine: "neural" },
+      { name: "Emma (Female)", value: "Emma", engine: "neural" },
+      { name: "Justin (Male)", value: "Justin", engine: "neural" },
+      { name: "Kendra (Female)", value: "Kendra", engine: "neural" },
+      { name: "Kimberly (Female)", value: "Kimberly", engine: "neural" },
+      { name: "Salli (Female)", value: "Salli", engine: "neural" },
+      { name: "Joey (Male)", value: "Joey", engine: "neural" },
+      { name: "Ivy (Female)", value: "Ivy", engine: "neural" },
     ],
   },
   "es-ES": {
     name: "Spanish (Spain)",
     voices: [
-      { name: "Conchita", value: "Conchita", engine: ["standard"] },
-      { name: "Enrique", value: "Enrique", engine: ["standard"] },
+      { name: "Conchita (Female)", value: "Conchita", engine: "neural" },
+      { name: "Enrique (Male)", value: "Enrique", engine: "neural" },
+      { name: "Lucia (Female)", value: "Lucia", engine: "neural" },
+    ],
+  },
+  "fr-FR": {
+    name: "French (France)",
+    voices: [
+      { name: "Celine (Female)", value: "Celine", engine: "neural" },
+      { name: "Mathieu (Male)", value: "Mathieu", engine: "neural" },
+      { name: "Lea (Female)", value: "Lea", engine: "neural" },
+    ],
+  },
+  "de-DE": {
+    name: "German (Germany)",
+    voices: [
+      { name: "Marlene (Female)", value: "Marlene", engine: "neural" },
+      { name: "Hans (Male)", value: "Hans", engine: "neural" },
+      { name: "Vicki (Female)", value: "Vicki", engine: "neural" },
+    ],
+  },
+  "it-IT": {
+    name: "Italian (Italy)",
+    voices: [
+      { name: "Carla (Female)", value: "Carla", engine: "neural" },
+      { name: "Giorgio (Male)", value: "Giorgio", engine: "neural" },
+      { name: "Bianca (Female)", value: "Bianca", engine: "neural" },
+    ],
+  },
+  "pt-BR": {
+    name: "Portuguese (Brazil)",
+    voices: [
+      { name: "Vitoria (Female)", value: "Vitoria", engine: "neural" },
+      { name: "Ricardo (Male)", value: "Ricardo", engine: "neural" },
+      { name: "Camila (Female)", value: "Camila", engine: "neural" },
+    ],
+  },
+  "ru-RU": {
+    name: "Russian (Russia)",
+    voices: [
+      { name: "Tatyana (Female)", value: "Tatyana", engine: "neural" },
+      { name: "Maxim (Male)", value: "Maxim", engine: "neural" },
     ],
   },
   "ja-JP": {
-    name: "Japanese",
-    voices: [{ name: "Mizuki", value: "Mizuki", engine: ["standard"] }],
+    name: "Japanese (Japan)",
+    voices: [
+      { name: "Mizuki (Female)", value: "Mizuki", engine: "neural" },
+      { name: "Takumi (Male)", value: "Takumi", engine: "neural" },
+    ],
+  },
+  "ko-KR": {
+    name: "Korean (South Korea)",
+    voices: [{ name: "Seoyeon (Female)", value: "Seoyeon", engine: "neural" }],
   },
   "zh-CN": {
     name: "Chinese (Mandarin)",
-    voices: [{ name: "Zhiyu", value: "Zhiyu", engine: ["standard", "neural"] }],
-  },
-  "ar-SA": {
-    name: "Arabic",
-    voices: [{ name: "Zeina", value: "Zeina", engine: ["standard"] }],
-  },
-  "ar-AE": {
-    name: "Arabic (Gulf)",
-    voices: [
-      { name: "Hala", value: "Hala", engine: ["standard"] },
-      { name: "Zayd", value: "Zayd", engine: ["standard"] },
-    ],
+    voices: [{ name: "Zhiyu (Female)", value: "Zhiyu", engine: "neural" }],
   },
 };
 
 function App() {
-  type LanguageKey = keyof typeof LANGUAGES;
-  const maxCharacters = 250;
+  const { user, isLoading: authLoading } = useAuth();
   const [text, setText] = useState("");
-  const [isPaused, setIsPaused] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [rate, setRate] = useState(1);
-  const [pitch, setPitch] = useState(1);
   const [selectedLanguage, setSelectedLanguage] =
     useState<LanguageKey>("en-US");
-  const [engine, setEngine] = useState("standard");
-  const [selectedVoice, setSelectedVoice] = useState(
-    LANGUAGES["en-US"].voices[0].value
-  );
-  const [isRecording, setIsRecording] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isComplete, setIsComplete] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState("Joanna");
+  const [rate, setRate] = useState(1);
+  const [pitch, setPitch] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [showControls, setShowControls] = useState(false);
+  // const [error, setError] = useState("");
+  const [currentEngine, setCurrentEngine] = useState<"standard" | "neural">(
+    "neural"
+  );
   const [activeTab, setActiveTab] = useState<"tts" | "record" | "voices">(
     "tts"
   );
+  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
   const [selectedClonedVoiceId, setSelectedClonedVoiceId] = useState<
     string | null
   >(null);
   const [useClonedVoice, setUseClonedVoice] = useState(false);
-  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
-  const [isLoadingVoices, setIsLoadingVoices] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [showErrorMessage, setShowErrorMessage] = useState(false);
+  const [type, setSuccessMessageType] = useState<"success" | "error">(
+    "success"
+  );
 
-  // Dummy cloned voices data - replace with actual API call
-  const dummyClonedVoices: ClonedVoice[] = [
-    {
-      id: "1",
-      name: "My Voice Clone",
-      createdAt: "2024-01-15T10:30:00Z",
-      status: "ready",
-      sampleUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
-    },
-    {
-      id: "2",
-      name: "Professional Voice",
-      createdAt: "2024-01-14T15:45:00Z",
-      status: "ready",
-      sampleUrl: "https://www.soundjay.com/misc/sounds/bell-ringing-05.wav",
-    },
-    {
-      id: "3",
-      name: "Casual Voice",
-      createdAt: "2024-01-13T09:20:00Z",
-      status: "processing",
-    },
-    {
-      id: "4",
-      name: "Failed Voice",
-      createdAt: "2024-01-12T14:10:00Z",
-      status: "failed",
-    },
-  ];
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const maxCharacters = 250;
 
-  // Fetch cloned voices
+  // Fetch cloned voices on component mount
+  useEffect(() => {
+    if (user) {
+      fetchClonedVoices();
+    }
+  }, [user]);
+
   const fetchClonedVoices = async () => {
-    setIsLoadingVoices(true);
+    console.log("user", user);
+    if (!user) return;
+
     try {
-      // Simulate API call - replace with actual endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setClonedVoices(dummyClonedVoices);
-    } catch (error) {
-      console.error("Error fetching cloned voices:", error);
-    } finally {
-      setIsLoadingVoices(false);
-    }
-  };
+      const data = await apiFetchClonedVoices();
+      console.log("API Response:", data);
 
-  // Load cloned voices on component mount
-  React.useEffect(() => {
-    fetchClonedVoices();
-  }, []);
+      // Transform the API response to match our interface
+      const transformedVoices: ClonedVoice[] = data.voices.map(
+        (voice: any) => ({
+          id: voice.voice_id,
+          name: voice.name,
+          status: voice.status,
+          createdAt: voice.created_at,
+        })
+      );
 
-  React.useEffect(() => {
-    if (!useClonedVoice) {
-      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
-    }
-  }, [selectedLanguage]);
+      setClonedVoices(transformedVoices);
 
-  // Update selected voice when switching to cloned voices
-  React.useEffect(() => {
-    if (useClonedVoice) {
-      const readyVoices = clonedVoices.filter(
+      // If we have ready voices and none is selected, select the first one
+      const readyVoices = transformedVoices.filter(
         (voice) => voice.status === "ready"
       );
-      if (readyVoices.length > 0) {
-        setSelectedVoice(readyVoices[0].id);
+      if (readyVoices.length > 0 && !selectedClonedVoiceId) {
         setSelectedClonedVoiceId(readyVoices[0].id);
+        setSelectedVoice(readyVoices[0].id);
       }
-    } else {
-      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
-      setSelectedClonedVoiceId(null);
+    } catch (error) {
+      console.error("Error fetching cloned voices:", error);
     }
-  }, [useClonedVoice, clonedVoices]);
-
-  const base64ToBlob = (base64: string) => {
-    const binaryString = window.atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return new Blob([bytes], { type: "audio/mp3" });
   };
 
-  const findEngine = (val: string) => {
-    const aa = LANGUAGES[selectedLanguage].voices.find(
-      (voice) => voice.value == val
-    );
-    setEngine(aa?.engine?.[0] || "standard");
+  const findEngine = (voiceValue: string) => {
+    for (const lang of Object.values(LANGUAGES)) {
+      const voice = lang.voices.find((v) => v.value === voiceValue);
+      if (voice) {
+        setCurrentEngine(voice.engine);
+        return;
+      }
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const input = e.target.value;
-    setText(input);
-
-    if (input.length > maxCharacters) {
-      setError(`Maximum ${maxCharacters} characters allowed.`);
+    const newText = e.target.value;
+    if (newText.length <= maxCharacters) {
+      setText(newText);
+      setErrorMessage("");
+      // setError("");
     } else {
-      setError("");
-    }
-  };
-
-  const handleRecordingComplete = async (audioBlob: Blob, name: string) => {
-    try {
-      // Simulate API call to upload voice for cloning
-      const formData = new FormData();
-      formData.append("audio", audioBlob, "voice-sample.wav");
-      formData.append("name", name);
-
-      // Replace with actual API endpoint
-      console.log("Uploading voice for cloning:", { name, audioBlob });
-
-      // Refresh cloned voices after upload
-      await fetchClonedVoices();
-
-      // Switch to voices tab after successful upload
-      setActiveTab("voices");
-    } catch (error) {
-      console.error("Error uploading voice:", error);
-    }
-  };
-
-  const handleClonedVoiceSelect = (voiceId: string | null) => {
-    setSelectedClonedVoiceId(voiceId);
-    setUseClonedVoice(voiceId !== null);
-    if (voiceId) {
-      setSelectedVoice(voiceId);
-    }
-  };
-
-  const handleClonedVoiceDelete = (voiceId: string) => {
-    setClonedVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
-    if (selectedClonedVoiceId === voiceId) {
-      setSelectedClonedVoiceId(null);
-      setUseClonedVoice(false);
-      setSelectedVoice(LANGUAGES[selectedLanguage].voices[0].value);
+      setErrorMessage(`Text exceeds ${maxCharacters} characters`);
+      setShowErrorMessage(true);
+      setSuccessMessageType("error");
     }
   };
 
   const handleSpeak = async () => {
-    if (isSpeaking && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+    if (!text.trim()) return;
+
+    if (isSpeaking) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setIsSpeaking(false);
+      setIsComplete(false);
       setShowControls(false);
       return;
     }
 
-    if (!text.trim()) {
-      setError("Please enter some text to convert to speech");
+    // Only require login for cloned voices
+    if (useClonedVoice && !user) {
+      setShowAuthModal(true);
       return;
     }
 
+    setIsLoading(true);
+    setErrorMessage("");
+    setIsComplete(false);
+    setShowControls(false);
+
+    let audioUrl: string;
+
     try {
-      setIsLoading(true);
-      setError(null);
-      setProgress(0);
-      setIsComplete(false);
-      setAudioUrl(null);
-      setShowControls(true);
-
-      let data;
-
       if (useClonedVoice && selectedClonedVoiceId) {
-        // Use cloned voice
-        data = {
-          text,
-          clonedVoiceId: selectedClonedVoiceId,
-          rate,
-          pitch,
-        };
+        // Call cloned voice API
+        const data = await clonedTextToSpeech(text, selectedClonedVoiceId);
+        audioUrl = data.audioUrl;
       } else {
-        // Use standard voice
-        data = {
-          text: `<speak><prosody rate=\"${convertToSSML(
-            rate
-          )}\" pitch=\"${convertToSSML(pitch)}\">${text}</prosody></speak>`,
-          language: selectedLanguage,
-          voice: selectedVoice,
-          engine,
-        };
+        // Call standard TTS API
+        const data = await textToSpeech(text, selectedVoice, rate, pitch);
+        console.log("data", data);
+        audioUrl = data.audioUrl;
       }
 
-      const response = await axios.post(
-        "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
-        data,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (response.data) {
-        const audioBlob = base64ToBlob(response.data);
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-        setIsComplete(true);
-
-        if (audioRef.current) {
-          audioRef.current.src = url;
-          audioRef.current.play();
+      setAudioUrl(audioUrl);
+      console.log(audioRef.current, "audioRef.current");
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.onloadeddata = () => {
+          setIsLoading(false);
           setIsSpeaking(true);
+          audioRef.current?.play();
+        };
 
-          audioRef.current.onended = () => {
-            setIsSpeaking(false);
-            setProgress(100);
-          };
-        }
-      } else {
-        throw new Error("No audio data received from the server");
+        audioRef.current.onended = () => {
+          setIsSpeaking(false);
+          setIsComplete(true);
+          setShowControls(true);
+        };
+
+        audioRef.current.onerror = () => {
+          setErrorMessage("Failed to load audio");
+          setIsLoading(false);
+          setIsSpeaking(false);
+        };
       }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to convert text to speech"
+    } catch (error: any) {
+      console.error("Error:", error);
+      setErrorMessage(
+        `${error?.response?.data}` ||
+          `Failed to convert text to speech. Please try again.`
       );
-      console.error("Error:", err);
-    } finally {
+      setShowErrorMessage(true);
+      setSuccessMessageType("error");
       setIsLoading(false);
+      setIsSpeaking(false);
     }
-  };
-
-  const convertToSSML = (value: number): string => {
-    if (value === 1) return "medium";
-
-    const percentage = Math.round((value - 1) * 100);
-    return `${percentage > 0 ? "+" : ""}${percentage}%`;
   };
 
   const handleDownload = () => {
     if (audioUrl) {
-      const a = document.createElement("a");
-      a.href = audioUrl;
-      a.download = "speech.mp3";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = document.createElement("a");
+      link.href = audioUrl;
+      link.download = "speech.mp3";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
   const handleShare = async () => {
-    if (audioUrl) {
+    if (audioUrl && navigator.share) {
       try {
-        const blob = await fetch(audioUrl).then((r) => r.blob());
-        const file = new File([blob], "speech.mp3", { type: "audio/mp3" });
-
-        if (navigator.share) {
-          await navigator.share({
-            files: [file],
-            title: "Text to Speech Audio",
-            text: "Check out this audio generated from text!",
-          });
-        } else {
-          alert("Web Share API is not supported in your browser");
-        }
+        await navigator.share({
+          title: "Generated Speech",
+          url: audioUrl,
+        });
       } catch (error) {
         console.error("Error sharing:", error);
+      }
+    } else {
+      // Fallback: copy URL to clipboard
+      if (audioUrl) {
+        navigator.clipboard.writeText(audioUrl);
+        alert("Audio URL copied to clipboard!");
       }
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
-      <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2 flex items-center justify-center gap-2">
-            <Volume2 className="h-8 w-8 text-purple-600" />
-            Voxora
-          </h1>
-          <p className="text-gray-600">
-            Convert text to speech with AI voices or create your own voice clone
-          </p>
-        </div>
+  const handleRecordingComplete = async (audioBlob: Blob, name: string) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
 
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("audio", audioBlob, `${name}.wav`);
+      formData.append("name", name);
+
+      const result = await apiUploadVoice(formData);
+      console.log("Voice upload successful:", result);
+
+      // Refresh the cloned voices list
+      await fetchClonedVoices();
+
+      // Switch to voices tab to show the uploaded voice
+      setActiveTab("voices");
+    } catch (error) {
+      console.error("Error uploading voice:", error);
+      alert("Failed to upload voice. Please try again.");
+    }
+  };
+
+  const handleClonedVoiceSelect = (voiceId: string) => {
+    setSelectedClonedVoiceId(voiceId);
+    setSelectedVoice(voiceId);
+    setUseClonedVoice(true);
+    setActiveTab("tts");
+  };
+
+  const handleClonedVoiceDelete = async (voiceId: string) => {
+    if (!user) return;
+
+    try {
+      await apiDeleteVoice(voiceId);
+
+      // Remove the voice from local state
+      setClonedVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
+
+      // If the deleted voice was selected, clear the selection
+      if (selectedClonedVoiceId === voiceId) {
+        setSelectedClonedVoiceId(null);
+        setUseClonedVoice(false);
+        setSelectedVoice("Joanna");
+      }
+    } catch (error) {
+      console.error("Error deleting voice:", error);
+      alert("Failed to delete voice. Please try again.");
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      {/* Header Section */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                Free Text to Speech Converter
+              </h1>
+              <p className="text-gray-600">
+                Convert your text to natural-sounding speech instantly
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {user ? (
+                <UserMenu />
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors shadow-md hover:shadow-lg"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Sign In
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Section */}
+      <main className="container mx-auto px-4 py-8">
         {/* Tab Navigation */}
-        <div className="bg-white rounded-xl shadow-lg mb-6">
+        <div className="bg-white rounded-xl shadow-lg mb-8 border border-gray-100">
           <div className="flex border-b border-gray-200">
             <button
               onClick={() => setActiveTab("tts")}
-              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
+              className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 ${
                 activeTab === "tts"
                   ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
-                  : "text-gray-600 hover:text-gray-800"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               <Volume2 className="h-5 w-5 mx-auto mb-1" />
               Text to Speech
             </button>
+
             {/* <button
-              onClick={() => setActiveTab('record')}
-              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-                activeTab === 'record'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 hover:text-gray-800'
+              onClick={() => {
+                if (!user) {
+                  setShowAuthModal(true);
+                } else {
+                  setActiveTab("record");
+                }
+              }}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 ${
+                activeTab === "record"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               <Mic className="h-5 w-5 mx-auto mb-1" />
               Record Voice
+              {!user && (
+                <span className="block text-xs text-gray-500">
+                  Login Required
+                </span>
+              )}
             </button>
+
             <button
-              onClick={() => setActiveTab('voices')}
-              className={`flex-1 px-6 py-4 text-center font-medium transition-colors ${
-                activeTab === 'voices'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 hover:text-gray-800'
+              onClick={() => {
+                if (!user) {
+                  setShowAuthModal(true);
+                } else {
+                  setActiveTab("voices");
+                }
+              }}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 ${
+                activeTab === "voices"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
               }`}
             >
               <User className="h-5 w-5 mx-auto mb-1" />
               My Voices
+              {!user && (
+                <span className="block text-xs text-gray-500">
+                  Login Required
+                </span>
+              )}
             </button> */}
           </div>
         </div>
 
         {/* Tab Content */}
+        <div className="relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md z-10 p-4">
+            <SuccessMessage
+              message={successMessage}
+              isVisible={showSuccessMessage}
+              onClose={() => setShowSuccessMessage(false)}
+            />
+            <SuccessMessage
+              message={errorMessage}
+              isVisible={showErrorMessage}
+              onClose={() => setShowErrorMessage(false)}
+              type={type}
+            />
+          </div>
+        </div>
+
         {activeTab === "tts" && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-            {/* <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Voice Type
-              </label>
-              <div className="flex gap-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="voiceType"
-                    checked={!useClonedVoice}
-                    onChange={() => {
-                      setUseClonedVoice(false);
-                      setSelectedClonedVoiceId(null);
-                    }}
-                    className="mr-2"
-                  />
-                  <span className="text-gray-700">Standard AI Voices</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="voiceType"
-                    checked={useClonedVoice}
-                    onChange={() => {
-                      const readyVoices = clonedVoices.filter(
-                        (voice) => voice.status === "ready"
-                      );
-                      if (readyVoices.length > 0) {
-                        setUseClonedVoice(true);
-                      }
-                    }}
-                    disabled={
-                      clonedVoices.filter((voice) => voice.status === "ready")
-                        .length === 0
-                    }
-                    className="mr-2"
-                  />
-                  <span
-                    className={`${
-                      clonedVoices.filter((voice) => voice.status === "ready")
-                        .length === 0
-                        ? "text-gray-400"
-                        : "text-gray-700"
-                    }`}
-                  >
-                    Cloned Voice{" "}
-                    {clonedVoices.filter((voice) => voice.status === "ready")
-                      .length === 0 && "(No voices available)"}
-                  </span>
-                </label>
-              </div>
-            </div> */}
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+            {user &&
+              clonedVoices.filter((voice) => voice.status === "ready").length >
+                0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Voice Type
+                  </label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="voiceType"
+                        checked={!useClonedVoice}
+                        onChange={() => {
+                          setUseClonedVoice(false);
+                          setSelectedClonedVoiceId(null);
+                        }}
+                        className="mr-2"
+                      />
+                      <span className="text-gray-700">Standard AI Voices</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="voiceType"
+                        checked={useClonedVoice}
+                        onChange={() => {
+                          const readyVoices = clonedVoices.filter(
+                            (voice) => voice.status === "ready"
+                          );
+                          if (readyVoices.length > 0) {
+                            setUseClonedVoice(true);
+                          }
+                        }}
+                        disabled={
+                          clonedVoices.filter(
+                            (voice) => voice.status === "ready"
+                          ).length === 0
+                        }
+                        className="mr-2"
+                      />
+                      <span
+                        className={`${
+                          clonedVoices.filter(
+                            (voice) => voice.status === "ready"
+                          ).length === 0
+                            ? "text-gray-400"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        Cloned Voice{" "}
+                        {clonedVoices.filter(
+                          (voice) => voice.status === "ready"
+                        ).length === 0 && "(No voices available)"}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
 
             <textarea
               className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -610,9 +696,9 @@ function App() {
 
               <button
                 onClick={handleSpeak}
-                disabled={isLoading || text.length === 0 || error !== ""}
+                disabled={isLoading || text.length === 0 || errorMessage !== ""}
                 className={`px-6 py-2 rounded-lg flex items-center gap-2 ${
-                  isLoading || text.length === 0 || error !== ""
+                  isLoading || text.length === 0 || errorMessage !== ""
                     ? "bg-gray-400 cursor-not-allowed"
                     : isSpeaking
                     ? "bg-red-500 hover:bg-red-600 text-white"
@@ -658,20 +744,59 @@ function App() {
           </div>
         )}
 
-        {activeTab === "record" && (
-          <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-        )}
+        {activeTab === "record" &&
+          (user ? (
+            <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+              <Mic className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Sign In Required
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Please sign in to record and upload your voice
+              </p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+            </div>
+          ))}
 
-        {activeTab === "voices" && (
-          <ClonedVoiceSelector
-            selectedVoiceId={selectedClonedVoiceId}
-            onVoiceSelect={handleClonedVoiceSelect}
-            onVoiceDelete={handleClonedVoiceDelete}
-            clonedVoices={clonedVoices}
-            onRefresh={fetchClonedVoices}
-          />
-        )}
-      </div>
+        {activeTab === "voices" &&
+          (user ? (
+            <ClonedVoiceSelector
+              selectedVoiceId={selectedClonedVoiceId}
+              onVoiceSelect={handleClonedVoiceSelect}
+              onVoiceDelete={handleClonedVoiceDelete}
+              clonedVoices={clonedVoices}
+              onRefresh={fetchClonedVoices}
+            />
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg p-8 text-center">
+              <User className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Sign In Required
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Please sign in to view and manage your cloned voices
+              </p>
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+              >
+                Sign In
+              </button>
+            </div>
+          ))}
+      </main>
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
   );
 }

@@ -25,6 +25,13 @@ Resources:
           Properties:
             Path: /text-to-speech
             Method: post
+            Cors:
+              AllowOrigins:
+                - "'*'"
+              AllowHeaders:
+                - "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              AllowMethods:
+                - "'POST, GET, OPTIONS'
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref AudioBucket
@@ -53,7 +60,7 @@ Resources:
 Outputs:
   TextToSpeechApi:
     Description: API Gateway endpoint URL
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/text-to-speech/"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/dev/text-to-speech/"
   AudioBucketName:
     Description: Name of the S3 bucket for audio files
     Value: !Ref AudioBucket
