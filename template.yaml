@@ -3,6 +3,14 @@ Transform: AWS::Serverless-2016-10-31
 Description: Text to Speech Lambda Function
 
 Globals:
+  Api:
+    Cors:
+      AllowOrigins:
+        - "'*'"
+      AllowHeaders:
+        - "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+      AllowMethods:
+        - "'POST, GET, OPTIONS, PUT, DELETE'"
   Function:
     Timeout: 30
     MemorySize: 128
@@ -25,13 +33,6 @@ Resources:
           Properties:
             Path: /text-to-speech
             Method: post
-            Cors:
-              AllowOrigins:
-                - "'*'"
-              AllowHeaders:
-                - "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-              AllowMethods:
-                - "'POST, GET, OPTIONS'
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref AudioBucket

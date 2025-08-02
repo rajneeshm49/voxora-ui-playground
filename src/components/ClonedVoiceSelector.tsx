@@ -121,12 +121,14 @@ export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
 
     setIsDeleting(true);
     try {
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
         `https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/delete-voice?voiceId=${voiceId}`,
         {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -260,6 +262,7 @@ export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
           </div>
 
           {/* Cloned voices */}
+          {}
           {clonedVoices.map((voice) => (
             <div
               key={voice.id}
@@ -276,16 +279,16 @@ export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h4 className="font-medium text-gray-800">{voice.name}</h4>
-                    <span
+                    {/* <span
                       className={`px-2 py-1 text-xs rounded-full ${getStatusColor(
                         voice.status
                       )}`}
                     >
                       {getStatusText(voice.status)}
-                    </span>
+                    </span> */}
                   </div>
                   <p className="text-sm text-gray-600">
-                    Created: {formatDate(voice.createdAt)}
+                    Created: {voice.createdAt}
                   </p>
                 </div>
 

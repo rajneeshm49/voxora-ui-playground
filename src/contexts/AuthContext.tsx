@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
+import axios from "axios";
 
 interface User {
   email: string;
@@ -92,6 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const data = await response.json();
+      console.log("email", email, data);
       const userData = { email, ...data.user };
       saveAuthData(data.token, userData);
     } catch (error) {
@@ -103,46 +105,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (email: string, password: string) => {
     try {
       console.log("Attempting registration with:", { email });
-      const response = await fetch(
+
+      const response = await axios.post(
         "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/auth/register",
+        { email, password },
         {
-          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email, password }),
         }
       );
 
-      console.log("Registration response status:", response.status);
-      console.log("Registration response headers:", response.headers);
+      console.log("Registration successful:", response.data);
+      const userData = { email, ...response.data.user };
+      saveAuthData(response.data.token, userData);
+    } catch (error: any) {
+      console.log("--------", error);
+      if (axios.isAxiosError(error)) {
+        console.error("Axios error response:", error.response?.data);
 
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-          console.log("Registration error data:", errorData);
-        } catch (parseError) {
-          console.log("Failed to parse error response:", parseError);
-          errorData = {
-            message: `HTTP ${response.status}: ${response.statusText}`,
-          };
-        }
-        throw new Error(errorData.message || "Registration failed");
+        const message =
+          error.response?.data?.message ||
+          `HTTP ${error.response?.status}: ${error.response?.statusText}` ||
+          "Registration failed";
+        throw new Error(message);
+      } else {
+        console.error("Unexpected error:", error);
+        throw new Error("Something went wrong during registration.");
       }
-
-      const data = await response.json();
-      console.log("Registration successful:", data);
-      const userData = { email, ...data.user };
-      saveAuthData(data.token, userData);
-    } catch (error) {
-      console.error("Registration error:", error);
-      if (error instanceof TypeError && error.message.includes("fetch")) {
-        throw new Error(
-          "Network error: Please check your internet connection and try again."
-        );
-      }
-      throw error;
     }
   };
 

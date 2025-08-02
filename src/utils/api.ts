@@ -4,6 +4,7 @@ import axios from "axios";
 
 const API_BASE_URL =
   "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev";
+// "http://127.0.0.1:3000";
 
 export const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem("authToken");
@@ -135,11 +136,13 @@ export const textToSpeech = async (
     engine: "standard",
   };
 
+  const token = localStorage.getItem("authToken");
   const response = await axios.post(
     "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
     data,
     {
       headers: {
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     }
@@ -151,19 +154,6 @@ export const textToSpeech = async (
   const audioBlob = base64ToBlob(response.data);
   const url = URL.createObjectURL(audioBlob);
   return { audioUrl: url };
-  // return apiRequest(
-  //   "/tts",
-  //   {
-  //     method: "POST",
-  //     body: JSON.stringify({
-  //       text: ssmlText,
-  //       language: "en-US",
-  //       voice,
-  //       engine: "standard",
-  //     }),
-  //   },
-  //   false
-  // ); // Don't require auth for basic TTS
 };
 
 export const clonedTextToSpeech = async (text: string, voiceId: string) => {
@@ -177,38 +167,44 @@ export const clonedTextToSpeech = async (text: string, voiceId: string) => {
 };
 
 export const uploadVoice = async (formData: FormData) => {
-  const token = localStorage.getItem("authToken");
-  const headers: HeadersInit = {};
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}/upload-voice`, {
-    method: "POST",
-    headers,
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.message || `HTTP error! status: ${response.status}`
-    );
-  }
-
-  return response.json();
+  // const token = localStorage.getItem("authToken");
+  // const headers: HeadersInit = {};
+  // if (token) {
+  //   headers["Authorization"] = `Bearer ${token}`;
+  // }
+  // console.log("11111111111111111111");
+  // const response = await fetch(`${API_BASE_URL}/upload-voice`, {
+  //   method: "POST",
+  //   headers,
+  //   body: formData,
+  // });
+  // if (!response.ok) {
+  //   const errorData = await response.json().catch(() => ({}));
+  //   throw new Error(
+  //     errorData.message || `HTTP error! status: ${response.status}`
+  //   );
+  // }
+  // return response.json();
 };
 
 export const fetchClonedVoices = async () => {
-  return apiRequest("/list-voices?category=cloned", {
+  const token = localStorage.getItem("authToken");
+  if (!token) {
+    throw new Error("User not found");
+  }
+  // const user = JSON.parse(savedUser);
+  // const userId = user?.userId;
+  // if (!userId) {
+  //   throw new Error("User ID not found in user data");
+  // }
+  return apiRequest(`/list-voices?category=cloned`, {
     method: "GET",
     requireAuth: true,
   });
 };
 
 export const deleteVoice = async (voiceId: string) => {
-  return apiRequest(`/delete-voice?voiceId=${voiceId}`, {
-    method: "DELETE",
-  });
+  // return apiRequest(`/delete-voice?voiceId=${voiceId}`, {
+  //   method: "DELETE",
+  // });
 };

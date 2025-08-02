@@ -193,11 +193,9 @@ function App() {
         (voice: any) => ({
           id: voice.voice_id,
           name: voice.name,
-          status: voice.status,
-          createdAt: voice.created_at,
+          createdAt: voice.createdAt,
         })
       );
-
       setClonedVoices(transformedVoices);
 
       // If we have ready voices and none is selected, select the first one
@@ -366,10 +364,10 @@ function App() {
     }
   };
 
-  const handleClonedVoiceSelect = (voiceId: string | null) => {
+  const handleClonedVoiceSelect = (voiceId: string) => {
     setSelectedClonedVoiceId(voiceId);
-    setSelectedVoice(voiceId || "Joanna");
-    setUseClonedVoice(!!voiceId);
+    setSelectedVoice(voiceId);
+    setUseClonedVoice(true);
     setActiveTab("tts");
   };
 
@@ -454,7 +452,7 @@ function App() {
               Text to Speech
             </button>
 
-            {/* <button
+            <button
               onClick={() => {
                 if (!user) {
                   setShowAuthModal(true);
@@ -498,7 +496,7 @@ function App() {
                   Login Required
                 </span>
               )}
-            </button> */}
+            </button>
           </div>
         </div>
 
@@ -518,7 +516,6 @@ function App() {
             />
           </div>
         </div>
-
         {activeTab === "tts" && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
             {user &&

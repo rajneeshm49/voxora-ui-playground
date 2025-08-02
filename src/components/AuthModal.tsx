@@ -34,6 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       onClose();
       setEmail("");
       setPassword("");
+      setIsLogin(true);
     } catch (error) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
@@ -45,6 +46,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     onClose();
     setEmail("");
     setPassword("");
+    setIsLogin(true);
   };
 
   const handleGoogleError = (error: string) => {
@@ -71,7 +73,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             {isLogin ? "Sign In" : "Create Account"}
           </h3>
           <button
-            onClick={onClose}
+            onClick={() => {onClose(); setIsLogin(true);}}
             className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <X className="h-5 w-5 text-gray-500" />

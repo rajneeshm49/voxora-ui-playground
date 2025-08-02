@@ -103,7 +103,6 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       alert("Please provide a voice name and record audio first.");
       return;
     }
-
     setIsUploading(true);
     try {
       // Create FormData for file upload
@@ -114,12 +113,14 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         `${voiceName.trim()}.wav`
       );
       formData.append("name", voiceName.trim());
-
-      // Call the actual API endpoint
+      const token = localStorage.getItem("authToken");
       const response = await fetch(
         "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/upload-voice",
         {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         }
       );
