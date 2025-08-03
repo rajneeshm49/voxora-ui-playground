@@ -434,7 +434,7 @@ function App() {
                 Free Text to Speech Converter
               </h1>
               <p className="text-gray-600">
-                Convert your text to natural-sounding speech instantly
+                Convert your text to speech instantly using your own voice
               </p>
             </div>
 
