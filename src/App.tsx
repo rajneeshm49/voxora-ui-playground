@@ -208,7 +208,6 @@ function App() {
       );
       if (readyVoices.length > 0 && !selectedClonedVoiceId) {
         setSelectedClonedVoiceId(readyVoices[0].id);
-        setSelectedVoice(readyVoices[0].id);
       }
     } catch (error) {
       console.error("Error fetching cloned voices:", error);
@@ -377,8 +376,18 @@ function App() {
 
   const handleClonedVoiceSelect = (voiceId: string | null) => {
     setSelectedClonedVoiceId(voiceId);
-    setSelectedVoice(voiceId || "Joanna");
-    setTtsEndpoint(voiceId ? "cloned" : "standard");
+
+    if (voiceId) {
+      // When a cloned voice is selected, switch to the cloned TTS endpoint
+      setTtsEndpoint("cloned");
+    } else {
+      // When no cloned voice is selected, switch back to the standard TTS endpoint
+      // and reset the standard voice to a default (e.g., Joanna)
+      setTtsEndpoint("standard");
+      setSelectedVoice("Joanna");
+    }
+
+    // Always switch to the TTS tab when a voice is selected or deselected
     setActiveTab("tts");
   };
 
@@ -391,11 +400,11 @@ function App() {
       // Remove the voice from local state
       setClonedVoices((prev) => prev.filter((voice) => voice.id !== voiceId));
 
-      // If the deleted voice was selected, clear the selection
+      // If the deleted voice was selected, clear the selection and switch to standard
       if (selectedClonedVoiceId === voiceId) {
         setSelectedClonedVoiceId(null);
         setTtsEndpoint("standard");
-        setSelectedVoice("Joanna");
+        setSelectedVoice("Joanna"); // Reset to a default standard voice
       }
     } catch (error) {
       console.error("Error deleting voice:", error);
@@ -543,8 +552,10 @@ function App() {
                     checked={ttsEndpoint === "standard"}
                     onChange={(e) => {
                       setTtsEndpoint(e.target.value as "standard" | "cloned");
-                      setSelectedClonedVoiceId(null);
-                      setSelectedVoice("Joanna");
+                      if (e.target.value === "standard") {
+                        setSelectedClonedVoiceId(null);
+                        setSelectedVoice("Joanna");
+                      }
                     }}
                     className="mr-2"
                   />
@@ -568,7 +579,7 @@ function App() {
                       );
                       if (readyVoices.length > 0) {
                         setSelectedClonedVoiceId(readyVoices[0].id);
-                        setSelectedVoice(readyVoices[0].id);
+                        // Don't set selectedVoice for cloned voices
                       }
                     }}
                     disabled={
@@ -645,10 +656,10 @@ function App() {
                     } p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
                     value={selectedVoice}
                     onChange={(e) => {
-                      setSelectedVoice(e.target.value);
                       if (ttsEndpoint === "cloned") {
                         setSelectedClonedVoiceId(e.target.value);
                       } else {
+                        setSelectedVoice(e.target.value);
                         findEngine(e.target.value);
                       }
                     }}
