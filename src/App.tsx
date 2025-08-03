@@ -169,6 +169,9 @@ function App() {
   const [type, setSuccessMessageType] = useState<"success" | "error">(
     "success"
   );
+  const [ttsEndpoint, setTtsEndpoint] = useState<"standard" | "cloned">(
+    "standard"
+  );
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const maxCharacters = 250;
@@ -185,7 +188,7 @@ function App() {
     if (!user) return;
 
     try {
-      const data = await apiFetchClonedVoices();
+      const data = await apiFetchClonedVoices("cloned");
       console.log("API Response:", data);
 
       // Transform the API response to match our interface
@@ -194,6 +197,7 @@ function App() {
           id: voice.voice_id,
           name: voice.name,
           createdAt: voice.createdAt,
+          status: voice.status || "ready",
         })
       );
       setClonedVoices(transformedVoices);
@@ -248,8 +252,8 @@ function App() {
       return;
     }
 
-    // Only require login for cloned voices
-    if (useClonedVoice && !user) {
+    // Require login for cloned TTS endpoint
+    if (ttsEndpoint === "cloned" && !user) {
       setShowAuthModal(true);
       return;
     }
@@ -262,8 +266,8 @@ function App() {
     let audioUrl: string;
 
     try {
-      if (useClonedVoice && selectedClonedVoiceId) {
-        // Call cloned voice API
+      if (ttsEndpoint === "cloned" && selectedClonedVoiceId) {
+        // Call cloned TTS API
         const data = await clonedTextToSpeech(text, selectedClonedVoiceId);
         audioUrl = data.audioUrl;
       } else {
@@ -277,23 +281,30 @@ function App() {
       console.log(audioRef.current, "audioRef.current");
       if (audioRef.current) {
         audioRef.current.src = audioUrl;
+        console.log("Setting audio src to:", audioUrl);
         audioRef.current.onloadeddata = () => {
+          console.log("Audio loaded successfully");
           setIsLoading(false);
           setIsSpeaking(true);
           audioRef.current?.play();
         };
 
         audioRef.current.onended = () => {
+          console.log("Audio playback ended");
           setIsSpeaking(false);
           setIsComplete(true);
           setShowControls(true);
         };
 
         audioRef.current.onerror = () => {
+          console.error("Audio element error");
           setErrorMessage("Failed to load audio");
           setIsLoading(false);
           setIsSpeaking(false);
         };
+
+        // Try to load the audio
+        audioRef.current.load();
       }
     } catch (error: any) {
       console.error("Error:", error);
@@ -364,10 +375,10 @@ function App() {
     }
   };
 
-  const handleClonedVoiceSelect = (voiceId: string) => {
+  const handleClonedVoiceSelect = (voiceId: string | null) => {
     setSelectedClonedVoiceId(voiceId);
-    setSelectedVoice(voiceId);
-    setUseClonedVoice(true);
+    setSelectedVoice(voiceId || "Joanna");
+    setTtsEndpoint(voiceId ? "cloned" : "standard");
     setActiveTab("tts");
   };
 
@@ -383,7 +394,7 @@ function App() {
       // If the deleted voice was selected, clear the selection
       if (selectedClonedVoiceId === voiceId) {
         setSelectedClonedVoiceId(null);
-        setUseClonedVoice(false);
+        setTtsEndpoint("standard");
         setSelectedVoice("Joanna");
       }
     } catch (error) {
@@ -518,65 +529,74 @@ function App() {
         </div>
         {activeTab === "tts" && (
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
-            {user &&
-              clonedVoices.filter((voice) => voice.status === "ready").length >
-                0 && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Voice Type
-                  </label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="voiceType"
-                        checked={!useClonedVoice}
-                        onChange={() => {
-                          setUseClonedVoice(false);
-                          setSelectedClonedVoiceId(null);
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="text-gray-700">Standard AI Voices</span>
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="voiceType"
-                        checked={useClonedVoice}
-                        onChange={() => {
-                          const readyVoices = clonedVoices.filter(
-                            (voice) => voice.status === "ready"
-                          );
-                          if (readyVoices.length > 0) {
-                            setUseClonedVoice(true);
-                          }
-                        }}
-                        disabled={
-                          clonedVoices.filter(
-                            (voice) => voice.status === "ready"
-                          ).length === 0
-                        }
-                        className="mr-2"
-                      />
-                      <span
-                        className={`${
-                          clonedVoices.filter(
-                            (voice) => voice.status === "ready"
-                          ).length === 0
-                            ? "text-gray-400"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        Cloned Voice{" "}
-                        {clonedVoices.filter(
-                          (voice) => voice.status === "ready"
-                        ).length === 0 && "(No voices available)"}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              )}
+            {/* TTS Endpoint Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                TTS Service
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="ttsEndpoint"
+                    value="standard"
+                    checked={ttsEndpoint === "standard"}
+                    onChange={(e) => {
+                      setTtsEndpoint(e.target.value as "standard" | "cloned");
+                      setSelectedClonedVoiceId(null);
+                      setSelectedVoice("Joanna");
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-700">Standard TTS</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="ttsEndpoint"
+                    value="cloned"
+                    checked={ttsEndpoint === "cloned"}
+                    onChange={(e) => {
+                      if (!user) {
+                        setShowAuthModal(true);
+                        return;
+                      }
+                      setTtsEndpoint(e.target.value as "standard" | "cloned");
+                      // Auto-select first available cloned voice
+                      const readyVoices = clonedVoices.filter(
+                        (voice) => voice.status === "ready"
+                      );
+                      if (readyVoices.length > 0) {
+                        setSelectedClonedVoiceId(readyVoices[0].id);
+                        setSelectedVoice(readyVoices[0].id);
+                      }
+                    }}
+                    disabled={
+                      !user ||
+                      clonedVoices.filter((voice) => voice.status === "ready")
+                        .length === 0
+                    }
+                    className="mr-2"
+                  />
+                  <span
+                    className={`${
+                      !user ||
+                      clonedVoices.filter((voice) => voice.status === "ready")
+                        .length === 0
+                        ? "text-gray-400"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    Cloned Voice TTS
+                    {!user && " (Login Required)"}
+                    {user &&
+                      clonedVoices.filter((voice) => voice.status === "ready")
+                        .length === 0 &&
+                      " (No voices available)"}
+                  </span>
+                </label>
+              </div>
+            </div>
 
             <textarea
               className="w-full h-40 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
@@ -596,8 +616,8 @@ function App() {
             {/* Voice Controls */}
             <div className="mt-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {/* Language selector - only for standard voices */}
-                {!useClonedVoice && (
+                {/* Language selector - only for standard TTS */}
+                {ttsEndpoint === "standard" && (
                   <div className="flex items-center gap-2">
                     <Globe2 className="h-5 w-5 text-gray-600" />
                     <select
@@ -621,19 +641,19 @@ function App() {
                   <Settings className="h-5 w-5 text-gray-600" />
                   <select
                     className={`${
-                      !useClonedVoice ? "flex-1" : "w-full"
+                      ttsEndpoint === "standard" ? "flex-1" : "w-full"
                     } p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
                     value={selectedVoice}
                     onChange={(e) => {
                       setSelectedVoice(e.target.value);
-                      if (useClonedVoice) {
+                      if (ttsEndpoint === "cloned") {
                         setSelectedClonedVoiceId(e.target.value);
                       } else {
                         findEngine(e.target.value);
                       }
                     }}
                   >
-                    {useClonedVoice
+                    {ttsEndpoint === "cloned"
                       ? clonedVoices
                           .filter((voice) => voice.status === "ready")
                           .map((voice) => (
@@ -651,7 +671,7 @@ function App() {
               </div>
 
               {/* Rate and Pitch controls */}
-              {!useClonedVoice && (
+              {ttsEndpoint === "standard" && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="flex items-center gap-2 mb-2">

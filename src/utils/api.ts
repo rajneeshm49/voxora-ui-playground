@@ -157,13 +157,57 @@ export const textToSpeech = async (
 };
 
 export const clonedTextToSpeech = async (text: string, voiceId: string) => {
-  return apiRequest("/text-to-speech", {
-    method: "POST",
-    data: {
-      text,
-      voiceId,
-    },
-  });
+  try {
+    console.log("Calling cloned TTS with:", { text, voiceId });
+    const token = localStorage.getItem("authToken");
+    const response = await axios.post(
+      `${API_BASE_URL}/cloned-tts`,
+      {
+        text,
+        voiceId,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("Cloned TTS response:", response);
+    console.log("Response data type:", typeof response.data);
+    console.log("Response headers:", response.headers);
+
+    // Your backend returns base64 encoded audio data directly
+    let audioBlob;
+    if (typeof response.data === "string") {
+      // If it's a base64 string, decode it
+      const binaryString = atob(response.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      audioBlob = new Blob([bytes], { type: "audio/mpeg" });
+    } else {
+      // If it's already binary data
+      audioBlob = new Blob([response.data], { type: "audio/mpeg" });
+    }
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+    console.log("Created audio URL:", audioUrl);
+
+    return { audioUrl };
+  } catch (error: any) {
+    console.error("Cloned TTS error:", error);
+    if (axios.isAxiosError(error) && error.response) {
+      console.error("Error response:", error.response.data);
+      throw new Error(
+        error.response.data?.message ||
+          `HTTP error! status: ${error.response.status}`
+      );
+    }
+    throw new Error("Network or CORS error");
+  }
 };
 
 export const uploadVoice = async (formData: FormData) => {
@@ -187,17 +231,12 @@ export const uploadVoice = async (formData: FormData) => {
   // return response.json();
 };
 
-export const fetchClonedVoices = async () => {
+export const fetchClonedVoices = async (category: string = "cloned") => {
   const token = localStorage.getItem("authToken");
   if (!token) {
     throw new Error("User not found");
   }
-  // const user = JSON.parse(savedUser);
-  // const userId = user?.userId;
-  // if (!userId) {
-  //   throw new Error("User ID not found in user data");
-  // }
-  return apiRequest(`/list-voices?category=cloned`, {
+  return apiRequest(`/list-voices?category=${category}`, {
     method: "GET",
     requireAuth: true,
   });
