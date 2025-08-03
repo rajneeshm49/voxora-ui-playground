@@ -136,15 +136,19 @@ export const textToSpeech = async (
   };
 
   const token = localStorage.getItem("authToken");
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await axios.post(
     "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev/tts",
     data,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    }
+    { headers }
   );
 
   if (!response.data) {
