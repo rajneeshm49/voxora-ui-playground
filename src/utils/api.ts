@@ -4,7 +4,6 @@ import axios from "axios";
 
 const API_BASE_URL =
   "https://nsupy9x610.execute-api.ap-south-1.amazonaws.com/dev";
-// "http://127.0.0.1:3000";
 
 export const getAuthHeaders = (): HeadersInit => {
   const token = localStorage.getItem("authToken");
