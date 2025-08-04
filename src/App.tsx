@@ -330,21 +330,74 @@ function App() {
   };
 
   const handleShare = async () => {
-    if (audioUrl && navigator.share) {
+    if (!audioUrl) return;
+
+    // Check if the URL is a blob URL (local to browser)
+    const isBlobUrl = audioUrl.startsWith("blob:");
+
+    if (navigator.share && !isBlobUrl) {
+      // For regular URLs, use native sharing
       try {
         await navigator.share({
           title: "Generated Speech",
+          text: "Check out this generated speech!",
           url: audioUrl,
         });
       } catch (error) {
-        console.error("Error sharing:", error);
+        if (error.name !== "AbortError") {
+          console.error("Error sharing:", error);
+          // Fallback to clipboard
+          await copyToClipboard();
+        }
+      }
+    } else if (navigator.share && isBlobUrl) {
+      // For blob URLs, we need to share the file directly
+      try {
+        // Convert blob URL back to blob
+        const response = await fetch(audioUrl);
+        const blob = await response.blob();
+        const file = new File([blob], "speech.mp3", { type: "audio/mpeg" });
+
+        await navigator.share({
+          title: "Generated Speech",
+          text: "Check out this generated speech!",
+          files: [file],
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          console.error("Error sharing file:", error);
+          // Fallback to download
+          handleDownload();
+          setSuccessMessage("File downloaded! You can now share it manually.");
+          setShowSuccessMessage(true);
+          setSuccessMessageType("success");
+        }
       }
     } else {
-      // Fallback: copy URL to clipboard
-      if (audioUrl) {
-        navigator.clipboard.writeText(audioUrl);
-        alert("Audio URL copied to clipboard!");
+      // Fallback: copy URL to clipboard or download
+      await copyToClipboard();
+    }
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      if (audioUrl && !audioUrl.startsWith("blob:")) {
+        await navigator.clipboard.writeText(audioUrl);
+        setSuccessMessage("Audio URL copied to clipboard!");
+      } else {
+        // For blob URLs, we can't copy the URL, so download instead
+        handleDownload();
+        setSuccessMessage("File downloaded! You can now share it manually.");
       }
+      setShowSuccessMessage(true);
+      setSuccessMessageType("success");
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      // Final fallback - just download
+      handleDownload();
+      setSuccessMessage("File downloaded! You can now share it manually.");
+      setShowSuccessMessage(true);
+      setSuccessMessageType("success");
     }
   };
 
