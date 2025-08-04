@@ -343,7 +343,7 @@ function App() {
           text: "Check out this generated speech!",
           url: audioUrl,
         });
-      } catch (error) {
+      } catch (error: any) {
         if (error.name !== "AbortError") {
           console.error("Error sharing:", error);
           // Fallback to clipboard
@@ -363,7 +363,7 @@ function App() {
           text: "Check out this generated speech!",
           files: [file],
         });
-      } catch (error) {
+      } catch (error: any) {
         if (error.name !== "AbortError") {
           console.error("Error sharing file:", error);
           // Fallback to download
