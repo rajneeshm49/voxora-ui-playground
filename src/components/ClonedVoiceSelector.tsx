@@ -272,7 +272,7 @@ export const ClonedVoiceSelector: React.FC<ClonedVoiceSelectorProps> = ({
                   : "border-gray-200 hover:border-gray-300"
               } ${voice.status !== "ready" ? "opacity-60" : ""}`}
               onClick={() =>
-                voice.status === "ready" && onVoiceSelect(voice.id)
+                voice.status === "ready" ? onVoiceSelect(voice.id) : undefined
               }
             >
               <div className="flex items-center justify-between">

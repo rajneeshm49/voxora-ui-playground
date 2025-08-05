@@ -745,7 +745,11 @@ function App() {
                     className={`${
                       ttsEndpoint === "standard" ? "flex-1" : "w-full"
                     } p-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent`}
-                    value={selectedVoice}
+                    value={
+                      ttsEndpoint === "cloned"
+                        ? selectedClonedVoiceId || ""
+                        : selectedVoice
+                    }
                     onChange={(e) => {
                       if (ttsEndpoint === "cloned") {
                         setSelectedClonedVoiceId(e.target.value);
