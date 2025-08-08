@@ -578,47 +578,36 @@ function App() {
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Features</h2>
           <ul className="list-disc list-inside space-y-2 text-gray-600">
             <li>
-              <strong>Natural-Sounding Voices:</strong> High-quality AI voices
-              for clear, natural-sounding speech.
+              <strong>Natural-Sounding Voices:</strong> High-quality AI voices for clear, natural-sounding speech.
             </li>
             <li>
-              <strong>Voice Cloning:</strong> Clone your own voice for a
-              personalized text-to-speech experience.
+              <strong>Voice Cloning:</strong> Clone your own voice for a personalized text-to-speech experience.
             </li>
             <li>
-              <strong>Download and Share:</strong> Download your generated
-              speech as an MP3 file and share it with others.
+              <strong>Download and Share:</strong> Download your generated speech as an MP3 file and share it with others.
             </li>
             <li>
-              <strong>No Login Required:</strong> Use the standard
-              text-to-speech features without creating an account.
+              <strong>No Login Required:</strong> Use the standard text-to-speech features without creating an account.
             </li>
             <li>
-              <strong>Multiple Languages:</strong> Support for a wide variety of
-              languages and accents.
+              <strong>Multiple Languages:</strong> Support for a wide variety of languages and accents.
             </li>
           </ul>
         </div>
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            How it Works
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">How it Works</h2>
           <ol className="list-decimal list-inside space-y-2 text-gray-600">
             <li>
-              <strong>Enter Text:</strong> Type or paste the text you want to
-              convert into the text box.
+              <strong>Enter Text:</strong> Type or paste the text you want to convert into the text box.
             </li>
             <li>
-              <strong>Choose a Voice:</strong> Select from a wide range of
-              standard voices or use your own cloned voice.
+              <strong>Choose a Voice:</strong> Select from a wide range of standard voices or use your own cloned voice.
             </li>
             <li>
-              <strong>Generate Speech:</strong> Click the "Speak" button to
-              generate the audio.
+              <strong>Generate Speech:</strong> Click the "Speak" button to generate the audio.
             </li>
             <li>
-              <strong>Download and Share:</strong> Once the audio is generated,
-              you can download it as an MP3 file or share it with others.
+              <strong>Download and Share:</strong> Once the audio is generated, you can download it as an MP3 file or share it with others.
             </li>
           </ol>
         </div>
