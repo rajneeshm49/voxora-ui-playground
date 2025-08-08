@@ -9,11 +9,13 @@ import {
   Mic,
   User,
   LogIn,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { AuthModal } from "./components/AuthModal";
 import { UserMenu } from "./components/UserMenu";
 import { VoiceRecorder } from "./components/VoiceRecorder";
+import { DocumentReader } from "./components/DocumentReader";
 import {
   ClonedVoiceSelector,
   ClonedVoice,
@@ -153,7 +155,7 @@ function App() {
   const [currentEngine, setCurrentEngine] = useState<"standard" | "neural">(
     "neural"
   );
-  const [activeTab, setActiveTab] = useState<"tts" | "record" | "voices">(
+  const [activeTab, setActiveTab] = useState<"tts" | "record" | "voices" | "documents">(
     "tts"
   );
   const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
@@ -570,6 +572,18 @@ function App() {
                 </span>
               )}
             </button>
+
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 ${
+                activeTab === "documents"
+                  ? "text-purple-600 border-b-2 border-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-gray-800 hover:bg-gray-50"
+              }`}
+            >
+              <FileText className="h-5 w-5 mx-auto mb-1" />
+              Documents
+            </button>
           </div>
         </div>
 
@@ -887,6 +901,17 @@ function App() {
               </button>
             </div>
           ))}
+
+        {activeTab === "documents" && (
+          <DocumentReader
+            selectedLanguage={selectedLanguage}
+            selectedVoice={selectedVoice}
+            rate={rate}
+            pitch={pitch}
+            ttsEndpoint={ttsEndpoint}
+            selectedClonedVoiceId={selectedClonedVoiceId}
+          />
+        )}
 
         {activeTab === "voices" &&
           (user ? (

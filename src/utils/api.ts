@@ -250,3 +250,32 @@ export const deleteVoice = async (voiceId: string) => {
   //   method: "DELETE",
   // });
 };
+
+export const processDocument = async (file: File) => {
+  const formData = new FormData();
+  formData.append("document", file);
+
+  const token = localStorage.getItem("authToken");
+  const headers: HeadersInit = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}/process-document`,
+    {
+      method: "POST",
+      headers,
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.message || `HTTP error! status: ${response.status}`
+    );
+  }
+
+  return response.json();
+};
